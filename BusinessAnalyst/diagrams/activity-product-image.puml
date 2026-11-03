@@ -1,0 +1,20 @@
+@startuml
+title UC-06: Product image choice
+start
+:Seller adds product image;
+if (Mode?) then (LINK)
+  :Validate approved HTTPS URL, source and license;
+  :Store URL metadata only;
+  :Browser fetches source live;
+else (UPLOAD)
+  :Validate signature, dimensions and size;
+  :Store bytes and metadata in PostgreSQL;
+  :Serve through same-origin content route;
+endif
+if (Image loaded?) then (yes)
+  :Show product image;
+else (no)
+  :Show local placeholder;
+endif
+stop
+@enduml

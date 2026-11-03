@@ -1,0 +1,1759 @@
+openapi: 3.1.0
+info:
+  title: Minimal Marketplace API
+  version: 0.1.0
+  description: Target contract for Next.js + Spring Boot + PostgreSQL. COD only, USD only, four human roles. No
+    shipping, returns or refunds.
+servers:
+- url: http://localhost:8080
+  description: Local development; replace per deployment
+tags:
+- name: Identity
+- name: Discovery
+- name: Images
+- name: Reviews
+- name: SellerCatalog
+- name: Cart
+- name: Orders
+- name: SellerPayment
+- name: Administration
+paths:
+  /auth/login:
+    post:
+      tags:
+      - Identity
+      summary: Log in
+      operationId: logIn
+      x-roles:
+      - Guest
+      x-use-case: UC-03
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /accounts:
+    post:
+      tags:
+      - Identity
+      summary: Register member
+      operationId: registerMember
+      x-roles:
+      - Guest
+      x-use-case: UC-03
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /me:
+    get:
+      tags:
+      - Identity
+      summary: Get own account
+      operationId: getOwnAccount
+      x-roles:
+      - Member
+      - Seller
+      - Admin
+      x-use-case: UC-03
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    patch:
+      tags:
+      - Identity
+      summary: Update own account
+      operationId: updateOwnAccount
+      x-roles:
+      - Member
+      - Seller
+      - Admin
+      x-use-case: UC-03
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /home:
+    get:
+      tags:
+      - Discovery
+      summary: Get homepage
+      operationId: getHomepage
+      x-roles:
+      - Guest
+      - Member
+      - Seller
+      - Admin
+      x-use-case: UC-01
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Home'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /categories:
+    get:
+      tags:
+      - Discovery
+      summary: List categories
+      operationId: listCategories
+      x-roles:
+      - Guest
+      - Member
+      - Seller
+      - Admin
+      x-use-case: UC-01
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /products:
+    get:
+      tags:
+      - Discovery
+      summary: List products
+      operationId: listProducts
+      x-roles:
+      - Guest
+      - Member
+      - Seller
+      - Admin
+      x-use-case: UC-01
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: minPrice
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: maxPrice
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /products/{productId}:
+    get:
+      tags:
+      - Discovery
+      summary: Get product
+      operationId: getProduct
+      x-roles:
+      - Guest
+      - Member
+      - Seller
+      - Admin
+      x-use-case: UC-01
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /products/{productId}/images/{imageId}/content:
+    get:
+      tags:
+      - Images
+      summary: Get uploaded image
+      operationId: getUploadedImage
+      x-roles:
+      - Guest
+      - Member
+      - Seller
+      - Admin
+      x-use-case: UC-01
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Uploaded image bytes from PostgreSQL
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /products/{productId}/reviews:
+    get:
+      tags:
+      - Reviews
+      summary: List product reviews
+      operationId: listProductReviews
+      x-roles:
+      - Guest
+      - Member
+      - Seller
+      - Admin
+      x-use-case: UC-01
+      security:
+      - {}
+      - bearerAuth: []
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      tags:
+      - Reviews
+      summary: Create product review
+      operationId: createProductReview
+      x-roles:
+      - Member
+      x-use-case: UC-08
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /me/reviews/{reviewId}:
+    patch:
+      tags:
+      - Reviews
+      summary: Update own review
+      operationId: updateOwnReview
+      x-roles:
+      - Member
+      x-use-case: UC-08
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: reviewId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags:
+      - Reviews
+      summary: Delete own review
+      operationId: deleteOwnReview
+      x-roles:
+      - Member
+      x-use-case: UC-08
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: reviewId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: No content
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /seller/products:
+    get:
+      tags:
+      - SellerCatalog
+      summary: List own products
+      operationId: listOwnProducts
+      x-roles:
+      - Seller
+      x-use-case: UC-06
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    post:
+      tags:
+      - SellerCatalog
+      summary: Create own product
+      operationId: createOwnProduct
+      x-roles:
+      - Seller
+      x-use-case: UC-06
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductWrite'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /seller/products/{productId}:
+    patch:
+      tags:
+      - SellerCatalog
+      summary: Update own product
+      operationId: updateOwnProduct
+      x-roles:
+      - Seller
+      x-use-case: UC-06
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductWrite'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /seller/products/{productId}/images/link:
+    post:
+      tags:
+      - Images
+      summary: Add linked image
+      operationId: addLinkedImage
+      x-roles:
+      - Seller
+      x-use-case: UC-06
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageLinkCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductImage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /seller/products/{productId}/images/upload:
+    post:
+      tags:
+      - Images
+      summary: Upload product image
+      operationId: uploadProductImage
+      x-roles:
+      - Seller
+      x-use-case: UC-06
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImageUpload'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductImage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /seller/stock/{variantId}:
+    patch:
+      tags:
+      - SellerCatalog
+      summary: Update own stock
+      operationId: updateOwnStock
+      x-roles:
+      - Seller
+      x-use-case: UC-06
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: variantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stock'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /cart:
+    get:
+      tags:
+      - Cart
+      summary: Get own cart
+      operationId: getOwnCart
+      x-roles:
+      - Guest
+      - Member
+      x-use-case: UC-02
+      security:
+      - {}
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /cart/lines/{variantId}:
+    put:
+      tags:
+      - Cart
+      summary: Set cart line
+      operationId: setCartLine
+      x-roles:
+      - Guest
+      - Member
+      x-use-case: UC-02
+      security:
+      - {}
+      - bearerAuth: []
+      parameters:
+      - name: variantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartLineWrite'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags:
+      - Cart
+      summary: Remove cart line
+      operationId: removeCartLine
+      x-roles:
+      - Guest
+      - Member
+      x-use-case: UC-02
+      security:
+      - {}
+      - bearerAuth: []
+      parameters:
+      - name: variantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: No content
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /orders:
+    post:
+      tags:
+      - Orders
+      summary: Place COD order
+      operationId: placeCodOrder
+      x-roles:
+      - Member
+      x-use-case: UC-04
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrder'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /orders/{orderId}:
+    get:
+      tags:
+      - Orders
+      summary: Get own order
+      operationId: getOwnOrder
+      x-roles:
+      - Member
+      x-use-case: UC-04
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /orders/{orderId}/cancellation:
+    post:
+      tags:
+      - Orders
+      summary: Cancel unpaid order
+      operationId: cancelUnpaidOrder
+      x-roles:
+      - Member
+      x-use-case: UC-05
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /seller/orders:
+    get:
+      tags:
+      - SellerPayment
+      summary: List own seller orders
+      operationId: listOwnSellerOrders
+      x-roles:
+      - Seller
+      x-use-case: UC-07
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SellerOrderList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /seller/orders/{sellerOrderId}/mark-paid:
+    post:
+      tags:
+      - SellerPayment
+      summary: Mark own order paid
+      operationId: markOwnOrderPaid
+      x-roles:
+      - Seller
+      x-use-case: UC-07
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: sellerOrderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SellerOrder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /admin/sellers/{sellerId}:
+    patch:
+      tags:
+      - Administration
+      summary: Update seller status
+      operationId: updateSellerStatus
+      x-roles:
+      - Admin
+      x-use-case: UC-09
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: sellerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SellerStatusUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Seller'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /admin/reviews/{reviewId}/moderation:
+    patch:
+      tags:
+      - Administration
+      summary: Moderate review
+      operationId: moderateReview
+      x-roles:
+      - Admin
+      x-use-case: UC-10
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: reviewId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewModeration'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /admin/reports:
+    get:
+      tags:
+      - Administration
+      summary: Get report
+      operationId: getReport
+      x-roles:
+      - Admin
+      x-use-case: UC-10
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /admin/audit:
+    get:
+      tags:
+      - Administration
+      summary: List audit entries
+      operationId: listAuditEntries
+      x-roles:
+      - Admin
+      x-use-case: UC-10
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /seller/products/{productId}/images/{imageId}:
+    delete:
+      tags:
+      - Images
+      summary: Remove own product image
+      operationId: removeOwnProductImage
+      x-roles:
+      - Seller
+      x-use-case: UC-06
+      security:
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No content
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+  /admin/categories:
+    post:
+      tags:
+      - Administration
+      summary: Create category
+      operationId: createCategory
+      x-roles:
+      - Admin
+      x-use-case: UC-09
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryWrite'
+  /admin/categories/{categoryId}:
+    patch:
+      tags:
+      - Administration
+      summary: Update category
+      operationId: updateCategory
+      x-roles:
+      - Admin
+      x-use-case: UC-09
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryWrite'
+      parameters:
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: Role denied
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Missing or non-owned resource
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Conflict:
+      description: State, stock or idempotency conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Problem:
+      type: object
+      properties:
+        code: &id001
+          type: string
+        message: *id001
+        correlationId: *id001
+        fieldErrors:
+          type: object
+          additionalProperties: *id001
+      required:
+      - code
+      - message
+      - correlationId
+    LoginRequest:
+      type: object
+      properties:
+        login: *id001
+        password:
+          type: string
+          format: password
+      required:
+      - login
+      - password
+    AuthTokens:
+      type: object
+      properties:
+        accessToken: *id001
+        tokenType:
+          type: string
+          const: Bearer
+        expiresInSeconds:
+          type: integer
+      required:
+      - accessToken
+      - tokenType
+      - expiresInSeconds
+    RegisterRequest:
+      type: object
+      properties:
+        login: *id001
+        password:
+          type: string
+          format: password
+        displayName: *id001
+      required:
+      - login
+      - password
+      - displayName
+    Account:
+      type: object
+      properties:
+        id: &id002
+          type: string
+          format: uuid
+        login: *id001
+        displayName: *id001
+        role:
+          type: string
+          enum:
+          - MEMBER
+          - SELLER
+          - ADMIN
+      required:
+      - id
+      - login
+      - role
+    AccountUpdate:
+      type: object
+      properties:
+        displayName: *id001
+    Category:
+      type: object
+      properties:
+        id: *id002
+        name: *id001
+      required:
+      - id
+      - name
+    CategoryList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+      required:
+      - items
+    ProductImage:
+      type: object
+      properties:
+        id: *id002
+        mode:
+          type: string
+          enum:
+          - LINK
+          - UPLOAD
+        url:
+          type:
+          - string
+          - 'null'
+          format: uri
+        contentPath:
+          type:
+          - string
+          - 'null'
+        altText: *id001
+      required:
+      - id
+      - mode
+      - altText
+    Product:
+      type: object
+      properties:
+        id: *id002
+        sellerId: *id002
+        name: *id001
+        priceUsd: &id003
+          type: string
+          pattern: ^\d+\.\d{2}$
+        stock:
+          type: integer
+          minimum: 0
+        ratingAverage:
+          type:
+          - number
+          - 'null'
+          minimum: 1
+          maximum: 5
+        reviewCount:
+          type: integer
+          minimum: 0
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
+      required:
+      - id
+      - sellerId
+      - name
+      - priceUsd
+      - stock
+      - reviewCount
+      - images
+    ProductList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        page:
+          type: integer
+      required:
+      - items
+      - page
+    Home:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+      required:
+      - categories
+      - products
+    ProductWrite:
+      type: object
+      properties:
+        name: *id001
+        categoryId: *id002
+        priceUsd: *id003
+        published:
+          type: boolean
+      required:
+      - name
+      - categoryId
+      - priceUsd
+    ImageLinkCreate:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        sourcePage:
+          type: string
+          format: uri
+        licenseUrl:
+          type: string
+          format: uri
+        altText: *id001
+      required:
+      - url
+      - sourcePage
+      - licenseUrl
+      - altText
+    ImageUpload:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+        altText: *id001
+      required:
+      - file
+      - altText
+    StockUpdate:
+      type: object
+      properties:
+        onHand:
+          type: integer
+          minimum: 0
+      required:
+      - onHand
+    Stock:
+      type: object
+      properties:
+        variantId: *id002
+        onHand:
+          type: integer
+          minimum: 0
+      required:
+      - variantId
+      - onHand
+    CartLineWrite:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+      required:
+      - quantity
+    CartLine:
+      type: object
+      properties:
+        variantId: *id002
+        quantity:
+          type: integer
+          minimum: 1
+        unitPriceUsd: *id003
+      required:
+      - variantId
+      - quantity
+    Cart:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartLine'
+        totalUsd: *id003
+      required:
+      - lines
+      - totalUsd
+    CreateOrder:
+      type: object
+      properties:
+        addressId: *id002
+        voucherCode: *id001
+        paymentMethod:
+          type: string
+          const: COD
+      required:
+      - addressId
+      - paymentMethod
+    SellerOrder:
+      type: object
+      properties:
+        id: *id002
+        sellerId: *id002
+        paymentStatus:
+          type: string
+          enum:
+          - PENDING_PAYMENT
+          - PAID
+        totalUsd: *id003
+      required:
+      - id
+      - sellerId
+      - paymentStatus
+      - totalUsd
+    SellerOrderList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SellerOrder'
+      required:
+      - items
+    Order:
+      type: object
+      properties:
+        id: *id002
+        memberId: *id002
+        status:
+          type: string
+          enum:
+          - PLACED
+          - CANCELLED
+        paymentStatus:
+          type: string
+          enum:
+          - PENDING_PAYMENT
+          - PAID
+        totalUsd: *id003
+        sellerOrders:
+          type: array
+          items:
+            $ref: '#/components/schemas/SellerOrder'
+      required:
+      - id
+      - memberId
+      - status
+      - paymentStatus
+      - totalUsd
+      - sellerOrders
+    ReviewCreate:
+      type: object
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        text:
+          type: string
+          maxLength: 2000
+      required:
+      - rating
+    ReviewUpdate:
+      type: object
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        text:
+          type: string
+          maxLength: 2000
+    Review:
+      type: object
+      properties:
+        id: *id002
+        productId: *id002
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        text: *id001
+        visible:
+          type: boolean
+      required:
+      - id
+      - productId
+      - rating
+      - visible
+    ReviewList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+        average:
+          type:
+          - number
+          - 'null'
+        count:
+          type: integer
+      required:
+      - items
+      - count
+    SellerStatusUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - SUSPENDED
+        reason: *id001
+      required:
+      - status
+      - reason
+    Seller:
+      type: object
+      properties:
+        id: *id002
+        status:
+          type: string
+      required:
+      - id
+      - status
+    ReviewModeration:
+      type: object
+      properties:
+        visible:
+          type: boolean
+        reason: *id001
+      required:
+      - visible
+      - reason
+    Report:
+      type: object
+      properties:
+        orders:
+          type: integer
+        grossUsd: *id003
+      required:
+      - orders
+      - grossUsd
+    AuditEntry:
+      type: object
+      properties:
+        id: *id002
+        actorId: *id002
+        action: *id001
+        createdAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - actorId
+      - action
+      - createdAt
+    AuditList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+      required:
+      - items
+    CategoryWrite:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+      - name

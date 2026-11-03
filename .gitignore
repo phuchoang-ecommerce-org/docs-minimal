@@ -1,0 +1,16 @@
+# Generated diagrams (recreated by the documentation build)
+*.svg
+
+# Local build output and dependencies
+node_modules/
+dist/
+build/
+util/public/docs/
+.astro/
+.next/
+coverage/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example

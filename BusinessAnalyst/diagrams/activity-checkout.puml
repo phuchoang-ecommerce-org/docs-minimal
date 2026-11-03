@@ -1,0 +1,25 @@
+@startuml
+title UC-04: Guest cart to COD checkout
+start
+:Open cart;
+if (Member signed in?) then (no)
+  :Sign in and retain Guest cart;
+  :Merge valid Guest lines;
+endif
+:Review cart and owned address;
+:Submit COD checkout with idempotency key;
+:Recalculate USD totals, voucher, Seller status and stock;
+if (Valid and stock available?) then (yes)
+  :Begin PostgreSQL transaction;
+  :Decrement stock and create customer/Seller orders;
+  :Snapshot lines and append audit;
+  if (Commit succeeds?) then (yes)
+    :Show Pending Payment portions;
+  else (no)
+    :Rollback and show error;
+  endif
+else (no)
+  :Show error without writes;
+endif
+stop
+@enduml

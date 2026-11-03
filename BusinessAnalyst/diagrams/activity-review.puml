@@ -1,0 +1,17 @@
+@startuml
+title UC-08: Member rates and reviews
+start
+:Member opens product;
+if (Own Paid purchase?) then (no)
+  :Read reviews only;
+  stop
+endif
+:Enter 1-5 stars and optional text;
+if (Valid and no active prior review?) then (no)
+  :Show validation or conflict;
+  stop
+endif
+:Save review in PostgreSQL;
+:Refresh visible average and count;
+stop
+@enduml

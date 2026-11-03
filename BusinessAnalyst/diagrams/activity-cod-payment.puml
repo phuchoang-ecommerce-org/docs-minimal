@@ -1,0 +1,19 @@
+@startuml
+title UC-07: Seller confirms COD
+start
+:Seller opens own order portion;
+if (Owner and Pending Payment?) then (no)
+  :Return not-found or conflict;
+  stop
+endif
+:Seller attests cash received outside application;
+:Begin PostgreSQL transaction;
+:Mark own portion Paid and append audit;
+if (All Seller portions Paid?) then (yes)
+  :Customer order shows Paid;
+else (no)
+  :Customer order remains Pending Payment;
+endif
+:Commit transaction;
+stop
+@enduml
