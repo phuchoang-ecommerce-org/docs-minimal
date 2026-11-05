@@ -7,10 +7,8 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "copy:assets": "node copy-assets.mjs",
-    "build": "npm run diagrams:build && npm run validate:sequences && npm run copy:assets && astro build",
+    "build": "node copy-assets.mjs && astro build",
     "preview": "astro preview",
-    "test": "npm run build",
     "diagrams:build": "node toSvg.js",
     "validate:sequences": "node validate-sequences.mjs"
   },

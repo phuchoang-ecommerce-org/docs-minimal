@@ -12,10 +12,7 @@ build:
 preview:
 	npm run preview
 
-test:
-	npm test
-
 diagrams:
 	npm run diagrams:build
-
+	npm run validate:sequences
 
