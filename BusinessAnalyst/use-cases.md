@@ -19,4 +19,4 @@ This diagram maps human goals to the application boundary. The use-case diagram 
 | UC-09 | Admin | Authenticated Admin | Seller/category policy changed and audited | Invalid state or missing reason rejected |
 | UC-10 | Admin | Authenticated Admin | Review visibility changed; reports/audit viewed | Review not found or invalid decision rejected |
 
-The [activity diagrams](./activity-diagrams.md) show decisions and rollback points. API authorization is defined in the [OpenAPI contract](../SolutionArchitecture/api-contract/README.md); UI visibility alone is never authorization.
+The [activity diagrams](./activity-diagrams.md) show decisions and rollback points. API authorization is defined in the [OpenAPI contract](../SolutionArchitecture/api-contract/index.md); UI visibility alone is never authorization.

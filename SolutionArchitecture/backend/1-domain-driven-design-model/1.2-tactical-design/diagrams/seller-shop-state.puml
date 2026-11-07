@@ -1,0 +1,4 @@
+@startuml
+    ACTIVE --> SUSPENDED : UC-09 Admin suspends with reason
+    SUSPENDED --> ACTIVE : UC-09 Admin activates with reason
+@enduml

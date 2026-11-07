@@ -14,3 +14,6 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Generated self-contained API reference
+util/public/redoc.html

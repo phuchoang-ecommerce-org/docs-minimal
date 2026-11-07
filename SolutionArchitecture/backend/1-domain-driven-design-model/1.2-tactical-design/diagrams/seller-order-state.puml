@@ -1,0 +1,5 @@
+@startuml
+    [*] --> PENDING_PAYMENT : created within customer order
+    PENDING_PAYMENT --> PAID : UC-07 owned portion and parent PLACED
+    PAID --> [*]
+@enduml

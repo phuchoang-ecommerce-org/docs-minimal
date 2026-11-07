@@ -7,4 +7,4 @@ These diagrams show transaction and authorization boundaries for the main flows.
 - [Member rating and review](./rating-review.md)
 - [Product image modes](./product-images.md)
 
-The [activity diagrams](../../BusinessAnalyst/activity-diagrams.md) show actor decisions; these diagrams show the components and persistence calls.
+The [activity diagrams](../../../BusinessAnalyst/activity-diagrams.md) show actor decisions; these diagrams show the components and persistence calls.

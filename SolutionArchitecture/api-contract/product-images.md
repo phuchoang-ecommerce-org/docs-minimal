@@ -1,16 +1,16 @@
 # Product Image Contract
 
-## Product image contract: LINK or UPLOAD
+UC-06 owns image writes; UC-01 owns public display. A product may mix LINK and UPLOAD, up to 10 images. Metadata contains alt text, sort order and primary flag. The first image becomes primary; setting a new primary clears the old flag atomically. If the primary is deleted, promote the remaining image with lowest `(sortOrder,id)`; no image means no primary. These bounds and selection rules are revision 0.2.0 implementation defaults.
 
-The Seller chooses one mode for each product image. A product may mix modes; one image is designated primary. Metadata includes alt text and sort order in both modes.
-
-| Mode | Seller input | Stored in PostgreSQL | Display |
+| Mode | Input | PostgreSQL storage | Public response |
 | --- | --- | --- | --- |
-| LINK | Approved HTTPS image URL, source page and license reference | URL, provenance/license and metadata; **no image bytes** | Browser requests the approved source live; a local placeholder appears on failure |
-| UPLOAD | JPEG, PNG or WebP file through authenticated multipart API | Validated bytes in `BYTEA`, MIME, dimensions, size and metadata; **no remote URL** | Same-origin API streams PostgreSQL bytes with correct content type and cache headers; a placeholder appears on failure |
+| LINK | Approved HTTPS URL, source page, license URL, metadata | URL/provenance; no image bytes | `LinkedImage`: URL; no contentPath |
+| UPLOAD | Authenticated JPEG/PNG/WebP multipart file and metadata | Validated BYTEA, MIME, dimensions, byte count; no remote URL | `UploadedImage`: same-origin contentPath; no remote URL |
 
-For LINK, validate URL syntax and approved public host, then set a restrictive `img-src` allowlist. Do not use Next.js image optimization for LINK, which would create a separate cache. The browser/source may apply ordinary network caching outside application control. For UPLOAD, enforce a documented size limit (proposed 5 MiB per image), maximum dimensions and per-product count; inspect actual file signature and decode it rather than trusting extension or browser MIME. Reject SVG and executable formats. A Seller can edit/remove only images of their own products. Tests assert mutually exclusive URL/bytes fields.
+The schema uses `oneOf` and a mode discriminator, so an image cannot be both branches. Product version guards add/remove; creation returns updated `productVersion`. Metadata changes use remove/add in this minimal contract. Seller can mutate only owned product images while their shop is active. Every image lookup verifies the image belongs to the requested product.
 
-Future **development product seed data** may use LINK images from approved sources; this document does not create seed data. Production supports both LINK and UPLOAD. The source site is a live dependency only for LINK display; UPLOAD display depends on PostgreSQL.
+LINK is fetched directly by the browser. The backend neither downloads nor proxies Seller URLs. Validate HTTPS, approved public hostname and provenance against deployment configuration; reject credentials, internal/IP-literal targets and unapproved hosts as 400 `UNSAFE_IMAGE`. Approved hosts and license terms must be selected before enabling LINK in a deployment. Do not add an optimizer cache or persistent external storage. Display failures use the application's placeholder.
 
-“Free to use” does not mean copyright-free. The approved-source policy may include [Unsplash](https://unsplash.com/license) and [Pexels](https://www.pexels.com/license/) after review of current terms; record source/license for LINK and any imported image. Seller must ensure the particular image and depicted people/brands fit the product use. If server-side fetching of arbitrary URLs is ever introduced, review [OWASP's SSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html) first. This specification uses browser requests for LINK and file upload for UPLOAD; neither path makes the backend fetch a Seller URL.
+UPLOAD allows at most 5 MiB per file, 8192 pixels per side and 32 million decoded pixels. Validate actual signature, decode successfully, and reject SVG/executable/mismatched content. Oversized payload is 413; unsupported media is 415; unsafe/undecodable image is 400. More than 10 product images is 409. Reject before allocating an unbounded decoded bitmap. Multipart parser limits must produce the same problem envelope.
+
+`GET /products/{productId}/images/{imageId}/content` serves only UPLOAD bytes for a published product of an active Seller. LINK ID, mismatched product/image, unpublished product and inactive Seller return 404. Send actual Content-Type, `X-Content-Type-Options: nosniff` and `Cache-Control: no-store` so a removed/suspended product is not served from a stale public cache. Error JSON never uses an image MIME type.

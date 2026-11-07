@@ -7,7 +7,7 @@
 | Group | What to read |
 | --- | --- |
 | [Business Analyst](./BusinessAnalyst/README.md) | Scope, roles, business rules, [use-case diagram](./BusinessAnalyst/use-cases.md), [activity diagrams](./BusinessAnalyst/activity-diagrams.md), [BPMN 2.0 process](./BusinessAnalyst/bpmn-process.md) and [user stories](./BusinessAnalyst/user-stories.md) |
-| [Solution Architecture](./SolutionArchitecture/README.md) | System overview, backend, PostgreSQL, frontend monorepo, homepage, [sequence diagrams](./SolutionArchitecture/sequences/README.md) and [OpenAPI 3.1 / Swagger contract](./SolutionArchitecture/api-contract/README.md) |
+| [Solution Architecture](./SolutionArchitecture/README.md) | System overview, backend, PostgreSQL, frontend monorepo, homepage, [sequence diagrams](./SolutionArchitecture/sequences/README.md) and [OpenAPI 3.1 / ReDoc contract](./SolutionArchitecture/api-contract/index.md) |
 | [Testing & Benchmark](./TestingBenchmark/README.md) | Test strategy/examples/scenarios and benchmark method/scenarios |
 
 ## Normative conventions

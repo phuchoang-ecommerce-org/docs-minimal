@@ -16,10 +16,11 @@ const document = await getDocument(requestedPath);
 if (!document) return Astro.redirect('/');
 
 function toSitePath(href: string, isImage = false) {
-  if (/^(?:[a-z]+:|\/\/|#)/i.test(href)) return href;
+  if (/^(?:[a-z]+:|\/|#)/i.test(href)) return href;
   const [sourcePath, suffix = ''] = href.match(/^([^?#]*)(.*)$/)?.slice(1) ?? [href, ''];
   const resolved = posix.normalize(posix.join(posix.dirname(document.path), decodeURIComponent(sourcePath)));
-  return `${isImage ? '/docs' : ''}/${encodeURI(resolved)}${suffix}`;
+  const isAsset = isImage || !resolved.toLowerCase().endsWith('.md');
+  return `${isAsset ? '/docs' : ''}/${encodeURI(resolved)}${suffix}`;
 }
 
 function escapeHtml(value: string) {

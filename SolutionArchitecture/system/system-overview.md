@@ -35,7 +35,7 @@ Next.js owns the browser experience, route protection and server-side API client
 
 The deployment has a Next.js process, a Spring Boot process and PostgreSQL. HTTPS terminates at the application edge; production secrets are injected through deployment configuration. PostgreSQL backup/restore must include UPLOAD images. A database outage makes transactional operations unavailable; do not claim success for uncommitted work. The LINK image source is a separate availability dependency only for image display.
 
-See [backend design](../backend/backend-design.md), [frontend design](../frontend/frontend-design.md), [security](./security.md), [runtime profiles](./runtime-profiles.md) and [OpenAPI](../api-contract/README.md).
+See [backend design](../backend/backend-design.md), [frontend design](../frontend/frontend-design.md), [security](./security.md), [runtime profiles](./runtime-profiles.md) and [OpenAPI](../api-contract/index.md).
 
 ## Dependency disposition
 

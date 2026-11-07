@@ -1,22 +1,31 @@
 openapi: 3.1.0
 info:
   title: Minimal Marketplace API
-  version: 0.1.0
-  description: Target contract for Next.js + Spring Boot + PostgreSQL. COD only, USD only, four human roles. No
-    shipping, returns or refunds.
+  version: 0.2.0
+  description: Implementation target for UC-01 through UC-10. Java 21 / Spring MVC / PostgreSQL. COD and USD only.
+    See the contract index for scope decisions and implementation gates.
 servers:
 - url: http://localhost:8080
   description: Local development; replace per deployment
 tags:
 - name: Identity
+  description: UC-03 credential and Member registration flows.
 - name: Discovery
+  description: UC-01 published product and category reads.
 - name: Images
+  description: UC-01 display and UC-06 owned product image writes.
 - name: Reviews
+  description: UC-01 public ratings and UC-08 eligible Member reviews.
 - name: SellerCatalog
+  description: UC-06 owned products, variants and stock.
 - name: Cart
+  description: UC-02 Guest/Member cart.
 - name: Orders
+  description: UC-04 checkout and UC-05 cancellation.
 - name: SellerPayment
+  description: UC-07 recording COD cash for owned portions.
 - name: Administration
+  description: UC-09 policy and UC-10 moderation/reports/audit.
 paths:
   /auth/login:
     post:
@@ -40,16 +49,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthTokens'
+          headers:
+            Set-Cookie:
+              description: Expires the Guest cookie after successful Member cart consumption. No cookie is set for
+                the access token.
+              schema:
+                type: string
+              example: guest_cart=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+      description: 'Returns one access JWT and trusted account identity. For MEMBER, atomically consumes a valid
+        Guest cart once and merges valid quantities; rejected variants are reported. Replayed consumed cookie never
+        merges again. Seller/Admin login does not import a Guest cart. Invalid credentials return the same generic
+        401. No refresh token.
+
+
+        Use case: UC-03. Errors: 400 INVALID_REQUEST; 401 INVALID_CREDENTIALS; 415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR;
+        503 SERVICE_UNAVAILABLE. When a Guest cookie is supplied, require an allowed Origin; otherwise return 403
+        ORIGIN_DENIED. Invalidate consumed Guest cookie.'
+      security:
+      - {}
+      - guestCart: []
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - INVALID_CREDENTIALS
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+        '403':
+        - ORIGIN_DENIED
+      parameters:
+      - name: Origin
+        in: header
+        required: false
+        description: Required and checked against the allowlist when using a Guest cookie; optional for bearer-only
+          or cookie-free credential requests.
+        schema:
+          type: string
+          format: uri
   /accounts:
     post:
       tags:
@@ -65,6 +117,10 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/RegisterRequest'
+            example:
+              login: member@example.test
+              password: long-test-password
+              displayName: Member
       responses:
         '201':
           description: Created
@@ -74,108 +130,32 @@ paths:
                 $ref: '#/components/schemas/Account'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /me:
-    get:
-      tags:
-      - Identity
-      summary: Get own account
-      operationId: getOwnAccount
-      x-roles:
-      - Member
-      - Seller
-      - Admin
-      x-use-case: UC-03
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Account'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Creates MEMBER only; role, status and sellerId are never accepted. Seller/Admin accounts use
+        controlled provisioning, not public role selection.
+
+
+        Use case: UC-03. Errors: 400 INVALID_REQUEST; 409 LOGIN_ALREADY_EXISTS; 415 UNSUPPORTED_MEDIA_TYPE; 500
+        INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      security: []
+      x-error-codes:
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        - INVALID_REQUEST
         '409':
-          $ref: '#/components/responses/Conflict'
-    patch:
-      tags:
-      - Identity
-      summary: Update own account
-      operationId: updateOwnAccount
-      x-roles:
-      - Member
-      - Seller
-      - Admin
-      x-use-case: UC-03
-      security:
-      - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AccountUpdate'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Account'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-  /home:
-    get:
-      tags:
-      - Discovery
-      summary: Get homepage
-      operationId: getHomepage
-      x-roles:
-      - Guest
-      - Member
-      - Seller
-      - Admin
-      x-use-case: UC-01
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Home'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        - LOGIN_ALREADY_EXISTS
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
   /categories:
     get:
       tags:
@@ -197,14 +177,39 @@ paths:
                 $ref: '#/components/schemas/CategoryList'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      security: []
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - INVALID_CURSOR
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-01. Errors: 400 INVALID_REQUEST, INVALID_CURSOR; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
   /products:
     get:
       tags:
@@ -223,26 +228,45 @@ paths:
         required: false
         schema:
           type: string
+          minLength: 1
+          maxLength: 200
       - name: categoryId
         in: query
         required: false
         schema:
           type: string
+          format: uuid
       - name: minPrice
         in: query
         required: false
         schema:
           type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
       - name: maxPrice
         in: query
         required: false
         schema:
           type: string
-      - name: page
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      - name: limit
         in: query
         required: false
         schema:
           type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
       responses:
         '200':
           description: OK
@@ -252,14 +276,26 @@ paths:
                 $ref: '#/components/schemas/ProductList'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      security: []
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - INVALID_CURSOR
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-01. Errors: 400 INVALID_REQUEST, INVALID_CURSOR; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.
+        q uses PostgreSQL simple full-text search (websearch_to_tsquery), not relevance pagination; filter products
+        by variants within inclusive price bounds. minPrice must not exceed maxPrice. All public product/image/review
+        reads require published product and active Seller; otherwise detail returns 404.'
   /products/{productId}:
     get:
       tags:
@@ -288,14 +324,26 @@ paths:
                 $ref: '#/components/schemas/Product'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      security: []
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '404':
+        - RESOURCE_NOT_FOUND
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-01. Errors: 400 INVALID_REQUEST; 404 RESOURCE_NOT_FOUND; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
   /products/{productId}/images/{imageId}/content:
     get:
       tags:
@@ -337,16 +385,39 @@ paths:
               schema:
                 type: string
                 format: binary
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            X-Content-Type-Options:
+              schema:
+                type: string
+                const: nosniff
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      security: []
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '404':
+        - RESOURCE_NOT_FOUND
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-01. Errors: 400 INVALID_REQUEST; 404 RESOURCE_NOT_FOUND; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.
+        Only UPLOAD images of published products from active Sellers. LINK IDs and mismatched product/image return
+        404.'
   /products/{productId}/reviews:
     get:
       tags:
@@ -359,9 +430,7 @@ paths:
       - Seller
       - Admin
       x-use-case: UC-01
-      security:
-      - {}
-      - bearerAuth: []
+      security: []
       parameters:
       - name: productId
         in: path
@@ -369,11 +438,21 @@ paths:
         schema:
           type: string
           format: uuid
-      - name: page
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      - name: limit
         in: query
         required: false
         schema:
           type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
       responses:
         '200':
           description: OK
@@ -383,14 +462,27 @@ paths:
                 $ref: '#/components/schemas/ReviewList'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - INVALID_CURSOR
+        '404':
+        - RESOURCE_NOT_FOUND
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-01. Errors: 400 INVALID_REQUEST, INVALID_CURSOR; 404 RESOURCE_NOT_FOUND; 500 INTERNAL_ERROR;
+        503 SERVICE_UNAVAILABLE.'
     post:
       tags:
       - Reviews
@@ -399,8 +491,7 @@ paths:
       x-roles:
       - Member
       x-use-case: UC-08
-      security:
-      - bearerAuth: []
+      security: []
       parameters:
       - name: productId
         in: path
@@ -414,6 +505,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ReviewCreate'
+            example:
+              rating: 5
+              text: Fits as described.
       responses:
         '201':
           description: Created
@@ -423,14 +517,37 @@ paths:
                 $ref: '#/components/schemas/Review'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Requires that this Member owns a PAID seller portion containing the product. Aggregate order
+        need not be fully Paid. One active review per Member/product, including hidden reviews. Ineligible purchase
+        or duplicate active review returns 409.
+
+
+        Use case: UC-08. Errors: 400 INVALID_REQUEST; 404 RESOURCE_NOT_FOUND; 409 REVIEW_NOT_ELIGIBLE, REVIEW_ALREADY_EXISTS;
+        415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - REVIEW_NOT_ELIGIBLE
+        - REVIEW_ALREADY_EXISTS
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
   /me/reviews/{reviewId}:
     patch:
       tags:
@@ -472,6 +589,35 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Owner-filtered active review only. Omitted fields stay unchanged; empty text removes text; rating
+        remains 1–5. Editing a hidden review does not make it visible.
+
+
+        Use case: UC-08. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 404 RESOURCE_NOT_FOUND;
+        409 STALE_VERSION; 415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
     delete:
       tags:
       - Reviews
@@ -489,6 +635,13 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: expectedVersion
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
       responses:
         '204':
           description: No content
@@ -502,6 +655,31 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Soft-removes own active review and updates visible rating aggregates atomically. Repeated removal
+        returns 404; a subsequent eligible create is allowed.
+
+
+        Use case: UC-08. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 404 RESOURCE_NOT_FOUND;
+        409 STALE_VERSION; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
   /seller/products:
     get:
       tags:
@@ -526,10 +704,43 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - INVALID_CURSOR
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-06. Errors: 400 INVALID_REQUEST, INVALID_CURSOR; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
     post:
       tags:
       - SellerCatalog
@@ -546,6 +757,15 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ProductWrite'
+            example:
+              name: Cotton shirt
+              description: Cotton crew-neck shirt
+              categoryId: 00000000-0000-4000-8000-000000000001
+              published: false
+              variants:
+              - sku: SHIRT-BLUE-M
+                label: Blue / M
+                priceUsd: '12.50'
       responses:
         '201':
           description: Created
@@ -559,10 +779,38 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        - SELLER_INACTIVE
+        '409':
+        - STALE_VERSION
+        - SKU_ALREADY_EXISTS
+        - ITEM_UNAVAILABLE
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-06. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED, SELLER_INACTIVE;
+        409 STALE_VERSION, SKU_ALREADY_EXISTS, ITEM_UNAVAILABLE; 415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR;
+        503 SERVICE_UNAVAILABLE.'
   /seller/products/{productId}:
     patch:
       tags:
@@ -586,7 +834,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProductWrite'
+              $ref: '#/components/schemas/ProductUpdate'
       responses:
         '200':
           description: OK
@@ -604,6 +852,93 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        - SELLER_INACTIVE
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        - SKU_ALREADY_EXISTS
+        - ITEM_UNAVAILABLE
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-06. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED, SELLER_INACTIVE;
+        404 RESOURCE_NOT_FOUND; 409 STALE_VERSION, SKU_ALREADY_EXISTS, ITEM_UNAVAILABLE; 415 UNSUPPORTED_MEDIA_TYPE;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+    get:
+      tags:
+      - SellerCatalog
+      summary: Get own product
+      operationId: getOwnProduct
+      x-use-case: UC-06
+      x-roles:
+      - Seller
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Owner-filtered read includes unpublished products and stock versions. Available for reads while
+        shop is suspended; catalog writes require ACTIVE shop.
+
+
+        Use case: UC-06. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 404 RESOURCE_NOT_FOUND;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
   /seller/products/{productId}/images/link:
     post:
       tags:
@@ -645,6 +980,40 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - UNSAFE_IMAGE
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        - SELLER_INACTIVE
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        - IMAGE_LIMIT_EXCEEDED
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-06. Errors: 400 INVALID_REQUEST, UNSAFE_IMAGE; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED,
+        SELLER_INACTIVE; 404 RESOURCE_NOT_FOUND; 409 STALE_VERSION, IMAGE_LIMIT_EXCEEDED; 415 UNSUPPORTED_MEDIA_TYPE;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE. Maximum 10 images per product; product version protects changes.
+        First image is primary; explicit primary clears the previous primary. See product-images.md for decode limits
+        and primary replacement.'
   /seller/products/{productId}/images/upload:
     post:
       tags:
@@ -669,6 +1038,9 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/ImageUpload'
+            encoding:
+              file:
+                contentType: image/jpeg, image/png, image/webp
       responses:
         '201':
           description: Created
@@ -686,6 +1058,44 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - UNSAFE_IMAGE
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        - SELLER_INACTIVE
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        - IMAGE_LIMIT_EXCEEDED
+        '413':
+        - PAYLOAD_TOO_LARGE
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-06. Errors: 400 INVALID_REQUEST, UNSAFE_IMAGE; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED,
+        SELLER_INACTIVE; 404 RESOURCE_NOT_FOUND; 409 STALE_VERSION, IMAGE_LIMIT_EXCEEDED; 413 PAYLOAD_TOO_LARGE;
+        415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE. Maximum 10 images per product;
+        product version protects changes. First image is primary; explicit primary clears the previous primary.
+        See product-images.md for decode limits and primary replacement.'
   /seller/stock/{variantId}:
     patch:
       tags:
@@ -710,6 +1120,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/StockUpdate'
+            example:
+              onHand: 10
+              expectedVersion: 2
       responses:
         '200':
           description: OK
@@ -727,6 +1140,35 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        - SELLER_INACTIVE
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-06. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED, SELLER_INACTIVE;
+        404 RESOURCE_NOT_FOUND; 409 STALE_VERSION; 415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
   /cart:
     get:
       tags:
@@ -738,8 +1180,9 @@ paths:
       - Member
       x-use-case: UC-02
       security:
-      - {}
       - bearerAuth: []
+      - guestCart: []
+      - {}
       responses:
         '200':
           description: OK
@@ -747,16 +1190,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Cart'
+          headers:
+            Set-Cookie:
+              description: Only when initializing/rotating a Guest session. Secure in production. No session ID
+                in response JSON.
+              schema:
+                type: string
+              example: guest_cart=opaque-value; Path=/; HttpOnly; Secure; SameSite=Lax
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'GET initializes an empty Guest cart when no credential exists; sets the opaque cookie. Bearer
+        MEMBER selects Member cart; never fall back from invalid JWT to Guest. Otherwise require valid opaque Guest
+        cookie. Seller/Admin receive 403. Cookie-authenticated mutations require allowlisted Origin; no body owner
+        IDs. Quantity edits never reserve stock.
+
+
+        Use case: UC-02. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 500 INTERNAL_ERROR;
+        503 SERVICE_UNAVAILABLE.'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
   /cart/lines/{variantId}:
     put:
       tags:
@@ -768,8 +1237,8 @@ paths:
       - Member
       x-use-case: UC-02
       security:
-      - {}
       - bearerAuth: []
+      - guestCart: []
       parameters:
       - name: variantId
         in: path
@@ -777,6 +1246,14 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: Origin
+        in: header
+        required: false
+        description: Required and checked against the allowlist when using a Guest cookie; optional for bearer-only
+          or cookie-free credential requests.
+        schema:
+          type: string
+          format: uri
       requestBody:
         required: true
         content:
@@ -800,6 +1277,39 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Bearer MEMBER selects Member cart; never fall back from invalid JWT to Guest. Otherwise require
+        valid opaque Guest cookie. Seller/Admin receive 403. Cookie-authenticated mutations require allowlisted
+        Origin; no body owner IDs. Quantity edits never reserve stock.
+
+
+        Use case: UC-02. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED, ORIGIN_DENIED;
+        404 RESOURCE_NOT_FOUND; 409 STALE_VERSION, ITEM_UNAVAILABLE; 415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR;
+        503 SERVICE_UNAVAILABLE.'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        - ORIGIN_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        - ITEM_UNAVAILABLE
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
     delete:
       tags:
       - Cart
@@ -810,8 +1320,8 @@ paths:
       - Member
       x-use-case: UC-02
       security:
-      - {}
       - bearerAuth: []
+      - guestCart: []
       parameters:
       - name: variantId
         in: path
@@ -819,6 +1329,21 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: expectedVersion
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: Origin
+        in: header
+        required: false
+        description: Required and checked against the allowlist when using a Guest cookie; optional for bearer-only
+          or cookie-free credential requests.
+        schema:
+          type: string
+          format: uri
       responses:
         '204':
           description: No content
@@ -832,6 +1357,33 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Bearer MEMBER selects Member cart; never fall back from invalid JWT to Guest. Otherwise require
+        valid opaque Guest cookie. Seller/Admin receive 403. Cookie-authenticated mutations require allowlisted
+        Origin; no body owner IDs. Quantity edits never reserve stock.
+
+
+        Use case: UC-02. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED, ORIGIN_DENIED;
+        404 RESOURCE_NOT_FOUND; 409 STALE_VERSION; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        - ORIGIN_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
   /orders:
     post:
       tags:
@@ -857,6 +1409,10 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateOrder'
+            example:
+              addressId: 00000000-0000-4000-8000-000000000002
+              cartVersion: 3
+              paymentMethod: COD
       responses:
         '201':
           description: Created
@@ -874,6 +1430,107 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Atomically validates owned address, cartVersion, availability and optional voucher; snapshots
+        prices/address/discounts, creates portions, decreases stock, consumes cart and audits. Scope Idempotency-Key
+        by Member. Compare canonical request body (addressId, cartVersion, voucherCode, paymentMethod); same key/body
+        reconstructs the original 201 response from immutable snapshots (PLACED, all portions PENDING_PAYMENT, paidAt
+        null) before re-reading cart, address or voucher. Different body returns 409. Persist key/fingerprint with
+        immutable order snapshots, never expire while order is retained. A failed transaction consumes no key. Concurrent
+        same key waits for commit then replays. New key with stale cartVersion fails 409.
+
+
+        Use case: UC-04. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 404 RESOURCE_NOT_FOUND;
+        409 CART_CHANGED, EMPTY_CART, ITEM_UNAVAILABLE, STOCK_UNAVAILABLE, VOUCHER_INVALID, IDEMPOTENCY_CONFLICT;
+        415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - CART_CHANGED
+        - EMPTY_CART
+        - ITEM_UNAVAILABLE
+        - STOCK_UNAVAILABLE
+        - VOUCHER_INVALID
+        - IDEMPOTENCY_CONFLICT
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+    get:
+      tags:
+      - Orders
+      summary: List own orders
+      operationId: listOwnOrders
+      x-use-case: UC-04
+      x-roles:
+      - Member
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Own checkout history used to inspect/cancel orders and identify purchased products. Scoped by
+        authenticated Member on every page.
+
+
+        Use case: UC-04. Errors: 400 INVALID_REQUEST, INVALID_CURSOR; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - INVALID_CURSOR
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
   /orders/{orderId}:
     get:
       tags:
@@ -907,8 +1564,28 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-04. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 404 RESOURCE_NOT_FOUND;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
   /orders/{orderId}/cancellation:
     post:
       tags:
@@ -944,6 +1621,32 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Serialize on customer-order root with payment. Cancel only if ALL seller portions are PENDING_PAYMENT;
+        atomically set order/portions CANCELLED, restore stock once and audit. Already-cancelled retries return
+        current order without stock/audit duplication. Any Paid portion returns 409.
+
+
+        Use case: UC-05. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 404 RESOURCE_NOT_FOUND;
+        409 ILLEGAL_ORDER_STATE; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - ILLEGAL_ORDER_STATE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
   /seller/orders:
     get:
       tags:
@@ -968,10 +1671,43 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - INVALID_CURSOR
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-07. Errors: 400 INVALID_REQUEST, INVALID_CURSOR; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
   /seller/orders/{sellerOrderId}/mark-paid:
     post:
       tags:
@@ -1007,6 +1743,33 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'sellerOrderId is a portion ID, not customer order ID. Resolve SellerShop from authenticated
+        account. Serialize on parent order; require owned pending non-cancelled portion. Record Paid/actor/time
+        and audit atomically; parent becomes Paid only when all portions are Paid. Repeated Paid or cancelled transition
+        returns 409. No client amount or payment-provider payload.
+
+
+        Use case: UC-07. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 404 RESOURCE_NOT_FOUND;
+        409 ILLEGAL_ORDER_STATE; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - ILLEGAL_ORDER_STATE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
   /admin/sellers/{sellerId}:
     patch:
       tags:
@@ -1048,6 +1811,35 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-09. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 404 RESOURCE_NOT_FOUND;
+        409 STALE_VERSION; 415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE. Reason must
+        contain non-whitespace text; policy change and actor/target/reason audit commit atomically.'
   /admin/reviews/{reviewId}/moderation:
     patch:
       tags:
@@ -1089,6 +1881,35 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-10. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 404 RESOURCE_NOT_FOUND;
+        409 STALE_VERSION; 415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE. Reason must
+        contain non-whitespace text; policy change and actor/target/reason audit commit atomically.'
   /admin/reports:
     get:
       tags:
@@ -1103,14 +1924,16 @@ paths:
       parameters:
       - name: from
         in: query
-        required: false
+        required: true
         schema:
           type: string
+          format: date-time
       - name: to
         in: query
-        required: false
+        required: true
         schema:
           type: string
+          format: date-time
       responses:
         '200':
           description: OK
@@ -1124,10 +1947,28 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'UTC interval [from,to), maximum 366 days. orders counts non-cancelled customer orders created
+        in range; grossUsd sums their snapshotted totals after discount; paidUsd sums PAID seller portions whose
+        paidAt lies in range. No currency conversion or shipping revenue.
+
+
+        Use case: UC-10. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 500 INTERNAL_ERROR;
+        503 SERVICE_UNAVAILABLE.'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
   /admin/audit:
     get:
       tags:
@@ -1140,11 +1981,21 @@ paths:
       security:
       - bearerAuth: []
       parameters:
-      - name: page
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      - name: limit
         in: query
         required: false
         schema:
           type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
       responses:
         '200':
           description: OK
@@ -1158,10 +2009,27 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - INVALID_CURSOR
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-10. Errors: 400 INVALID_REQUEST, INVALID_CURSOR; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
   /seller/products/{productId}/images/{imageId}:
     delete:
       tags:
@@ -1186,6 +2054,10 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
       parameters:
       - name: productId
         in: path
@@ -1199,6 +2071,34 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: expectedVersion
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        - SELLER_INACTIVE
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-06. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED, SELLER_INACTIVE;
+        404 RESOURCE_NOT_FOUND; 409 STALE_VERSION; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
   /admin/categories:
     post:
       tags:
@@ -1223,16 +2123,41 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/CategoryWrite'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '409':
+        - STALE_VERSION
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-09. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 409 STALE_VERSION;
+        415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE. Reason must contain non-whitespace
+        text; policy change and actor/target/reason audit commit atomically.'
   /admin/categories/{categoryId}:
     patch:
       tags:
@@ -1261,12 +2186,18 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CategoryWrite'
+              $ref: '#/components/schemas/CategoryUpdate'
       parameters:
       - name: categoryId
         in: path
@@ -1274,101 +2205,610 @@ paths:
         schema:
           type: string
           format: uuid
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '404':
+        - RESOURCE_NOT_FOUND
+        '409':
+        - STALE_VERSION
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+      description: '
+
+
+        Use case: UC-09. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 404 RESOURCE_NOT_FOUND;
+        409 STALE_VERSION; 415 UNSUPPORTED_MEDIA_TYPE; 500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE. Reason must
+        contain non-whitespace text; policy change and actor/target/reason audit commit atomically.'
+  /me/addresses:
+    get:
+      tags:
+      - Orders
+      summary: List own checkout addresses
+      operationId: listOwnCheckoutAddresses
+      x-use-case: UC-04
+      x-roles:
+      - Member
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Lists owned addresses for checkout selection; no memberId parameter.
+
+
+        Use case: UC-04. Errors: 400 INVALID_REQUEST, INVALID_CURSOR; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - INVALID_CURSOR
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+    post:
+      tags:
+      - Orders
+      summary: Create own checkout address
+      operationId: createOwnCheckoutAddress
+      x-use-case: UC-04
+      x-roles:
+      - Member
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Creates an owned checkout address. Account identity comes from JWT. This contract does not expose
+        general profile/address editing or deletion.
+
+
+        Use case: UC-04. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 415 UNSUPPORTED_MEDIA_TYPE;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressValue'
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '415':
+        - UNSUPPORTED_MEDIA_TYPE
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+  /me/reviews:
+    get:
+      tags:
+      - Reviews
+      summary: List own reviews
+      operationId: listOwnReviews
+      x-use-case: UC-08
+      x-roles:
+      - Member
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnReviewList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Own active reviews, including hidden ones, for editing/removal. Does not expose other members
+        or removed content.
+
+
+        Use case: UC-08. Errors: 400 INVALID_REQUEST, INVALID_CURSOR; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - INVALID_CURSOR
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+  /admin/sellers:
+    get:
+      tags:
+      - Administration
+      summary: List sellers for policy
+      operationId: listSellersForPolicy
+      x-use-case: UC-09
+      x-roles:
+      - Admin
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SellerList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Lists ACTIVE/SUSPENDED SellerShop IDs, Account IDs and versions required for Seller policy changes.
+
+
+        Use case: UC-09. Errors: 400 INVALID_REQUEST, INVALID_CURSOR; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - INVALID_CURSOR
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
+  /admin/reviews:
+    get:
+      tags:
+      - Administration
+      summary: List reviews for moderation
+      operationId: listReviewsForModeration
+      x-use-case: UC-10
+      x-roles:
+      - Admin
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminReviewList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      description: 'Lists active visible/hidden reviews and versions; removed reviews remain represented only in
+        audit.
+
+
+        Use case: UC-10. Errors: 400 INVALID_REQUEST, INVALID_CURSOR; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED;
+        500 INTERNAL_ERROR; 503 SERVICE_UNAVAILABLE.'
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      x-error-codes:
+        '400':
+        - INVALID_REQUEST
+        - INVALID_CURSOR
+        '401':
+        - AUTHENTICATION_REQUIRED
+        '403':
+        - ROLE_DENIED
+        '500':
+        - INTERNAL_ERROR
+        '503':
+        - SERVICE_UNAVAILABLE
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    guestCart:
+      type: apiKey
+      in: cookie
+      name: guest_cart
+      description: Opaque server session, HttpOnly; Secure in production; SameSite=Lax. Browser never chooses cart
+        owner.
   responses:
     BadRequest:
       description: Invalid request
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: '#/components/schemas/BadRequestProblem'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            code: INVALID_CURSOR
+            message: Invalid request
+            correlationId: request-7cba
     Unauthorized:
-      description: Authentication required
+      description: Authentication required or invalid credentials
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: '#/components/schemas/UnauthorizedProblem'
+          example:
+            type: about:blank
+            title: Unauthorized
+            status: 401
+            code: AUTHENTICATION_REQUIRED
+            message: Authentication required or invalid credentials
+            correlationId: request-7cba
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+          description: Bearer challenge; never disclose credential details.
     Forbidden:
-      description: Role denied
+      description: Role, origin or Seller status denied
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: '#/components/schemas/ForbiddenProblem'
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+            code: ORIGIN_DENIED
+            message: Role, origin or Seller status denied
+            correlationId: request-7cba
     NotFound:
       description: Missing or non-owned resource
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: '#/components/schemas/NotFoundProblem'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: RESOURCE_NOT_FOUND
+            message: Missing or non-owned resource
+            correlationId: request-7cba
     Conflict:
-      description: State, stock or idempotency conflict
+      description: State, version, uniqueness or checkout conflict
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/Problem'
+            $ref: '#/components/schemas/ConflictProblem'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            code: CART_CHANGED
+            message: State, version, uniqueness or checkout conflict
+            correlationId: request-7cba
+    PayloadTooLarge:
+      description: Upload exceeds 5 MiB
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/PayloadTooLargeProblem'
+          example:
+            type: about:blank
+            title: Content Too Large
+            status: 413
+            code: PAYLOAD_TOO_LARGE
+            message: Upload exceeds 5 MiB
+            correlationId: request-7cba
+    UnsupportedMediaType:
+      description: Unsupported request media type
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/UnsupportedMediaTypeProblem'
+          example:
+            type: about:blank
+            title: Unsupported Media Type
+            status: 415
+            code: UNSUPPORTED_MEDIA_TYPE
+            message: Unsupported request media type
+            correlationId: request-7cba
+    InternalError:
+      description: Unexpected failure
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/InternalErrorProblem'
+          example:
+            type: about:blank
+            title: Internal Server Error
+            status: 500
+            code: INTERNAL_ERROR
+            message: Unexpected failure
+            correlationId: request-7cba
+    ServiceUnavailable:
+      description: Database or required service unavailable
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ServiceUnavailableProblem'
+          example:
+            type: about:blank
+            title: Service Unavailable
+            status: 503
+            code: SERVICE_UNAVAILABLE
+            message: Database or required service unavailable
+            correlationId: request-7cba
   schemas:
     Problem:
       type: object
+      additionalProperties: false
       properties:
-        code: &id001
+        type:
           type: string
-        message: *id001
-        correlationId: *id001
+          format: uri
+          const: about:blank
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        status:
+          type: integer
+          enum:
+          - 400
+          - 401
+          - 403
+          - 404
+          - 409
+          - 413
+          - 415
+          - 500
+          - 503
+        code:
+          type: string
+          enum:
+          - AUTHENTICATION_REQUIRED
+          - CART_CHANGED
+          - EMPTY_CART
+          - IDEMPOTENCY_CONFLICT
+          - ILLEGAL_ORDER_STATE
+          - IMAGE_LIMIT_EXCEEDED
+          - INTERNAL_ERROR
+          - INVALID_CREDENTIALS
+          - INVALID_CURSOR
+          - INVALID_REQUEST
+          - ITEM_UNAVAILABLE
+          - LOGIN_ALREADY_EXISTS
+          - ORIGIN_DENIED
+          - PAYLOAD_TOO_LARGE
+          - RESOURCE_NOT_FOUND
+          - REVIEW_ALREADY_EXISTS
+          - REVIEW_NOT_ELIGIBLE
+          - ROLE_DENIED
+          - SELLER_INACTIVE
+          - SERVICE_UNAVAILABLE
+          - SKU_ALREADY_EXISTS
+          - STALE_VERSION
+          - STOCK_UNAVAILABLE
+          - UNSAFE_IMAGE
+          - UNSUPPORTED_MEDIA_TYPE
+          - VOUCHER_INVALID
+        message:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        correlationId:
+          type: string
+          minLength: 1
+          maxLength: 128
         fieldErrors:
           type: object
-          additionalProperties: *id001
+          additionalProperties:
+            type: string
       required:
+      - type
+      - title
+      - status
       - code
       - message
       - correlationId
+      description: RFC 9457 envelope with project extensions. code is stable; message is safe for display, never
+        SQL/stack traces or secrets. fieldErrors contains request field paths only.
     LoginRequest:
       type: object
       properties:
-        login: *id001
+        login:
+          type: string
+          minLength: 1
+          maxLength: 100
         password:
           type: string
           format: password
+          minLength: 1
+          maxLength: 128
+          writeOnly: true
       required:
       - login
       - password
+      additionalProperties: false
     AuthTokens:
       type: object
       properties:
-        accessToken: *id001
+        accessToken:
+          type: string
         tokenType:
           type: string
           const: Bearer
         expiresInSeconds:
           type: integer
+          minimum: 1
+        account:
+          $ref: '#/components/schemas/Account'
+        cartMerge:
+          $ref: '#/components/schemas/CartMergeResult'
       required:
       - accessToken
       - tokenType
       - expiresInSeconds
+      - account
+      - cartMerge
+      additionalProperties: false
     RegisterRequest:
       type: object
       properties:
-        login: *id001
+        login:
+          type: string
+          minLength: 1
+          maxLength: 100
         password:
           type: string
           format: password
-        displayName: *id001
+          minLength: 12
+          maxLength: 128
+          writeOnly: true
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
       required:
       - login
       - password
       - displayName
+      additionalProperties: false
     Account:
       type: object
       properties:
-        id: &id002
+        id:
           type: string
           format: uuid
-        login: *id001
-        displayName: *id001
+        login:
+          type: string
+        displayName:
+          type: string
         role:
           type: string
           enum:
@@ -1379,18 +2819,24 @@ components:
       - id
       - login
       - role
-    AccountUpdate:
-      type: object
-      properties:
-        displayName: *id001
+      additionalProperties: false
     Category:
       type: object
       properties:
-        id: *id002
-        name: *id001
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        version:
+          type: integer
+          format: int64
+          minimum: 0
       required:
       - id
       - name
+      - version
+      additionalProperties: false
     CategoryList:
       type: object
       properties:
@@ -1398,43 +2844,60 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Category'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          description: Opaque authenticated cursor; null exactly when hasNext is false.
+        hasNext:
+          type: boolean
       required:
       - items
+      - nextCursor
+      - hasNext
+      additionalProperties: false
     ProductImage:
-      type: object
-      properties:
-        id: *id002
-        mode:
-          type: string
-          enum:
-          - LINK
-          - UPLOAD
-        url:
-          type:
-          - string
-          - 'null'
-          format: uri
-        contentPath:
-          type:
-          - string
-          - 'null'
-        altText: *id001
-      required:
-      - id
-      - mode
-      - altText
+      oneOf:
+      - $ref: '#/components/schemas/LinkedImage'
+      - $ref: '#/components/schemas/UploadedImage'
+      discriminator:
+        propertyName: mode
+        mapping:
+          LINK: '#/components/schemas/LinkedImage'
+          UPLOAD: '#/components/schemas/UploadedImage'
     Product:
       type: object
+      additionalProperties: false
       properties:
-        id: *id002
-        sellerId: *id002
-        name: *id001
-        priceUsd: &id003
+        id:
           type: string
-          pattern: ^\d+\.\d{2}$
-        stock:
+          format: uuid
+          description: SellerShop ID; not Account ID.
+        sellerId:
+          type: string
+          format: uuid
+          description: SellerShop ID; not Account ID.
+        categoryId:
+          type: string
+          format: uuid
+          description: SellerShop ID; not Account ID.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 5000
+        published:
+          type: boolean
+        version:
           type: integer
+          format: int64
           minimum: 0
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Variant'
         ratingAverage:
           type:
           - number
@@ -1451,9 +2914,13 @@ components:
       required:
       - id
       - sellerId
+      - categoryId
       - name
-      - priceUsd
-      - stock
+      - description
+      - published
+      - version
+      - variants
+      - ratingAverage
       - reviewCount
       - images
     ProductList:
@@ -1463,102 +2930,177 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Product'
-        page:
-          type: integer
-      required:
-      - items
-      - page
-    Home:
-      type: object
-      properties:
-        categories:
-          type: array
-          items:
-            $ref: '#/components/schemas/Category'
-        products:
-          type: array
-          items:
-            $ref: '#/components/schemas/Product'
-      required:
-      - categories
-      - products
-    ProductWrite:
-      type: object
-      properties:
-        name: *id001
-        categoryId: *id002
-        priceUsd: *id003
-        published:
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          description: Opaque authenticated cursor; null exactly when hasNext is false.
+        hasNext:
           type: boolean
       required:
+      - items
+      - nextCursor
+      - hasNext
+      additionalProperties: false
+    ProductWrite:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 5000
+        categoryId:
+          type: string
+          format: uuid
+        published:
+          type: boolean
+          default: false
+        variants:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/VariantCreate'
+      required:
       - name
+      - description
       - categoryId
-      - priceUsd
+      - variants
+      description: Server assigns product/variant IDs and initializes stock at zero. SKU is globally unique and
+        immutable. Set quantities via the stock operation.
     ImageLinkCreate:
       type: object
       properties:
         url:
           type: string
           format: uri
+          pattern: ^https://
         sourcePage:
           type: string
           format: uri
         licenseUrl:
           type: string
           format: uri
-        altText: *id001
+        altText:
+          type: string
+          maxLength: 500
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        sortOrder:
+          type: integer
+          minimum: 0
+          default: 0
+        primary:
+          type: boolean
+          default: false
       required:
       - url
       - sourcePage
       - licenseUrl
       - altText
+      - expectedVersion
+      additionalProperties: false
     ImageUpload:
       type: object
       properties:
         file:
           type: string
           format: binary
-        altText: *id001
+          description: JPEG, PNG or WebP; decoded signature must match MIME. Maximum 5 MiB, 8192 pixels per side
+            and 32 million pixels total.
+        altText:
+          type: string
+          maxLength: 500
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        sortOrder:
+          type: integer
+          minimum: 0
+          default: 0
+        primary:
+          type: boolean
+          default: false
       required:
       - file
       - altText
+      - expectedVersion
+      additionalProperties: false
     StockUpdate:
       type: object
       properties:
         onHand:
           type: integer
           minimum: 0
+          maximum: 2147483647
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
       required:
       - onHand
+      - expectedVersion
+      additionalProperties: false
     Stock:
       type: object
       properties:
-        variantId: *id002
+        variantId:
+          type: string
+          format: uuid
         onHand:
           type: integer
+          minimum: 0
+          maximum: 2147483647
+        version:
+          type: integer
+          format: int64
           minimum: 0
       required:
       - variantId
       - onHand
+      - version
+      additionalProperties: false
     CartLineWrite:
       type: object
       properties:
         quantity:
           type: integer
           minimum: 1
+          maximum: 2147483647
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
       required:
       - quantity
+      - expectedVersion
+      additionalProperties: false
     CartLine:
       type: object
       properties:
-        variantId: *id002
+        variantId:
+          type: string
+          format: uuid
         quantity:
           type: integer
           minimum: 1
-        unitPriceUsd: *id003
+          maximum: 2147483647
+        unitPriceUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
       required:
       - variantId
       - quantity
+      - unitPriceUsd
+      additionalProperties: false
     Cart:
       type: object
       properties:
@@ -1566,37 +3108,92 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CartLine'
-        totalUsd: *id003
+        totalUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
+        version:
+          type: integer
+          format: int64
+          minimum: 0
       required:
       - lines
       - totalUsd
+      - version
+      additionalProperties: false
     CreateOrder:
       type: object
       properties:
-        addressId: *id002
-        voucherCode: *id001
+        addressId:
+          type: string
+          format: uuid
+        voucherCode:
+          type: string
+          minLength: 1
+          maxLength: 100
         paymentMethod:
           type: string
           const: COD
+        cartVersion:
+          type: integer
+          format: int64
+          minimum: 0
       required:
       - addressId
       - paymentMethod
+      - cartVersion
+      additionalProperties: false
     SellerOrder:
       type: object
       properties:
-        id: *id002
-        sellerId: *id002
+        id:
+          type: string
+          format: uuid
+        sellerId:
+          type: string
+          format: uuid
         paymentStatus:
           type: string
           enum:
           - PENDING_PAYMENT
           - PAID
-        totalUsd: *id003
+        totalUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
+        createdAt:
+          type: string
+          format: date-time
+        orderId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - PLACED
+          - CANCELLED
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchasedLine'
+        paidAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
       required:
       - id
       - sellerId
       - paymentStatus
       - totalUsd
+      - createdAt
+      - orderId
+      - status
+      - lines
+      - paidAt
+      additionalProperties: false
     SellerOrderList:
       type: object
       properties:
@@ -1604,13 +3201,27 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SellerOrder'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          description: Opaque authenticated cursor; null exactly when hasNext is false.
+        hasNext:
+          type: boolean
       required:
       - items
+      - nextCursor
+      - hasNext
+      additionalProperties: false
     Order:
       type: object
       properties:
-        id: *id002
-        memberId: *id002
+        id:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
         status:
           type: string
           enum:
@@ -1621,11 +3232,32 @@ components:
           enum:
           - PENDING_PAYMENT
           - PAID
-        totalUsd: *id003
+        totalUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
         sellerOrders:
           type: array
           items:
             $ref: '#/components/schemas/SellerOrder'
+        createdAt:
+          type: string
+          format: date-time
+        address:
+          $ref: '#/components/schemas/AddressValue'
+        discountUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
+        paymentMethod:
+          type: string
+          const: COD
+        voucherCode:
+          type:
+          - string
+          - 'null'
       required:
       - id
       - memberId
@@ -1633,6 +3265,12 @@ components:
       - paymentStatus
       - totalUsd
       - sellerOrders
+      - createdAt
+      - address
+      - discountUsd
+      - paymentMethod
+      - voucherCode
+      additionalProperties: false
     ReviewCreate:
       type: object
       properties:
@@ -1643,8 +3281,10 @@ components:
         text:
           type: string
           maxLength: 2000
+          default: ''
       required:
       - rating
+      additionalProperties: false
     ReviewUpdate:
       type: object
       properties:
@@ -1655,23 +3295,48 @@ components:
         text:
           type: string
           maxLength: 2000
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+      - expectedVersion
+      minProperties: 2
+      additionalProperties: false
     Review:
       type: object
       properties:
-        id: *id002
-        productId: *id002
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
         rating:
           type: integer
           minimum: 1
           maximum: 5
-        text: *id001
+        text:
+          type: string
+          maxLength: 2000
         visible:
           type: boolean
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
       required:
       - id
       - productId
       - rating
       - visible
+      - version
+      - createdAt
+      - text
+      additionalProperties: false
     ReviewList:
       type: object
       properties:
@@ -1683,11 +3348,27 @@ components:
           type:
           - number
           - 'null'
+          minimum: 1
+          maximum: 5
         count:
           type: integer
+          minimum: 0
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          description: Opaque authenticated cursor; null exactly when hasNext is false.
+        hasNext:
+          type: boolean
       required:
       - items
       - count
+      - nextCursor
+      - hasNext
+      - average
+      description: count/average use all visible reviews for product, not only this page; zero reviews means count=0
+        and average=null.
+      additionalProperties: false
     SellerStatusUpdate:
       type: object
       properties:
@@ -1696,51 +3377,130 @@ components:
           enum:
           - ACTIVE
           - SUSPENDED
-        reason: *id001
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
       required:
       - status
       - reason
+      - expectedVersion
+      additionalProperties: false
     Seller:
       type: object
       properties:
-        id: *id002
+        id:
+          type: string
+          format: uuid
         status:
           type: string
+          enum:
+          - ACTIVE
+          - SUSPENDED
+        version:
+          type: integer
+          format: int64
+          minimum: 0
+        accountId:
+          type: string
+          format: uuid
       required:
       - id
       - status
+      - version
+      - accountId
+      additionalProperties: false
     ReviewModeration:
       type: object
       properties:
         visible:
           type: boolean
-        reason: *id001
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
       required:
       - visible
       - reason
+      - expectedVersion
+      additionalProperties: false
     Report:
       type: object
+      additionalProperties: false
       properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
         orders:
           type: integer
-        grossUsd: *id003
+          minimum: 0
+        grossUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
+        paidUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
       required:
+      - from
+      - to
       - orders
       - grossUsd
+      - paidUsd
     AuditEntry:
       type: object
       properties:
-        id: *id002
-        actorId: *id002
-        action: *id001
+        id:
+          type: string
+          format: uuid
+        actorId:
+          type: string
+          format: uuid
+        action:
+          type: string
         createdAt:
           type: string
           format: date-time
+        targetId:
+          type: string
+          format: uuid
+        targetType:
+          type: string
+          minLength: 1
+          maxLength: 100
+        reason:
+          type:
+          - string
+          - 'null'
+          maxLength: 1000
+        correlationId:
+          type: string
+          minLength: 1
+          maxLength: 128
       required:
       - id
       - actorId
       - action
       - createdAt
+      - targetId
+      - targetType
+      - reason
+      - correlationId
+      additionalProperties: false
     AuditList:
       type: object
       properties:
@@ -1748,12 +3508,590 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuditEntry'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          description: Opaque authenticated cursor; null exactly when hasNext is false.
+        hasNext:
+          type: boolean
       required:
       - items
+      - nextCursor
+      - hasNext
+      additionalProperties: false
     CategoryWrite:
       type: object
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 200
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
       required:
       - name
+      - reason
+      additionalProperties: false
+    MergeRejection:
+      type: object
+      additionalProperties: false
+      properties:
+        variantId:
+          type: string
+          format: uuid
+        code:
+          type: string
+          enum:
+          - ITEM_UNAVAILABLE
+          - QUANTITY_EXCEEDED
+      required:
+      - variantId
+      - code
+    CartMergeResult:
+      type: object
+      additionalProperties: false
+      properties:
+        merged:
+          type: boolean
+        rejectedLines:
+          type: array
+          items:
+            $ref: '#/components/schemas/MergeRejection'
+      required:
+      - merged
+      - rejectedLines
+    AddressValue:
+      type: object
+      additionalProperties: false
+      properties:
+        recipient:
+          type: string
+          minLength: 1
+          maxLength: 100
+        addressLine:
+          type: string
+          minLength: 1
+          maxLength: 200
+        locality:
+          type: string
+          minLength: 1
+          maxLength: 100
+        postalCode:
+          type: string
+          minLength: 1
+          maxLength: 100
+        country:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+      - recipient
+      - addressLine
+      - locality
+      - postalCode
+      - country
+    Address:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        recipient:
+          type: string
+          minLength: 1
+          maxLength: 100
+        addressLine:
+          type: string
+          minLength: 1
+          maxLength: 200
+        locality:
+          type: string
+          minLength: 1
+          maxLength: 100
+        postalCode:
+          type: string
+          minLength: 1
+          maxLength: 100
+        country:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+      - id
+      - recipient
+      - addressLine
+      - locality
+      - postalCode
+      - country
+    AddressList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          description: Opaque authenticated cursor; null exactly when hasNext is false.
+        hasNext:
+          type: boolean
+      required:
+      - items
+      - nextCursor
+      - hasNext
+    Variant:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 100
+        label:
+          type: string
+          minLength: 1
+          maxLength: 200
+        priceUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
+        stock:
+          $ref: '#/components/schemas/Stock'
+      required:
+      - id
+      - sku
+      - label
+      - priceUsd
+      - stock
+    VariantCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 100
+        label:
+          type: string
+          minLength: 1
+          maxLength: 200
+        priceUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
+      required:
+      - sku
+      - label
+      - priceUsd
+    VariantEdit:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+          minLength: 1
+          maxLength: 200
+        priceUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
+      required:
+      - id
+      minProperties: 2
+    ProductUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 5000
+        categoryId:
+          type: string
+          format: uuid
+        published:
+          type: boolean
+        variants:
+          type: array
+          minItems: 1
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/VariantCreate'
+            - $ref: '#/components/schemas/VariantEdit'
+      required:
+      - expectedVersion
+      minProperties: 2
+      description: Omitted fields/variants stay unchanged; null is invalid. A variant with id edits that product-owned
+        variant; without id it creates a variant with zero stock. Duplicate IDs/SKUs are rejected. No variant deletion;
+        existing order snapshots remain immutable. Product version guards price/variant/image changes; stock has
+        its own version.
+    LinkedImage:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        altText:
+          type: string
+          maxLength: 500
+        sortOrder:
+          type: integer
+          minimum: 0
+        primary:
+          type: boolean
+        productVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        mode:
+          const: LINK
+          type: string
+        url:
+          type: string
+          format: uri
+          pattern: ^https://
+        sourcePage:
+          type: string
+          format: uri
+        licenseUrl:
+          type: string
+          format: uri
+      required:
+      - id
+      - altText
+      - sortOrder
+      - primary
+      - productVersion
+      - mode
+      - url
+      - sourcePage
+      - licenseUrl
+    UploadedImage:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        altText:
+          type: string
+          maxLength: 500
+        sortOrder:
+          type: integer
+          minimum: 0
+        primary:
+          type: boolean
+        productVersion:
+          type: integer
+          format: int64
+          minimum: 0
+        mode:
+          const: UPLOAD
+          type: string
+        contentPath:
+          type: string
+          pattern: ^/products/
+        mimeType:
+          type: string
+          enum:
+          - image/jpeg
+          - image/png
+          - image/webp
+        sizeBytes:
+          type: integer
+          minimum: 1
+          maximum: 5242880
+        width:
+          type: integer
+          minimum: 1
+          maximum: 8192
+        height:
+          type: integer
+          minimum: 1
+          maximum: 8192
+      required:
+      - id
+      - altText
+      - sortOrder
+      - primary
+      - productVersion
+      - mode
+      - contentPath
+      - mimeType
+      - sizeBytes
+      - width
+      - height
+    OwnReviewList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          description: Opaque authenticated cursor; null exactly when hasNext is false.
+        hasNext:
+          type: boolean
+      required:
+      - items
+      - nextCursor
+      - hasNext
+    PurchasedLine:
+      type: object
+      additionalProperties: false
+      properties:
+        productId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+        productName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 100
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        unitPriceUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
+        discountUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
+        totalUsd:
+          type: string
+          pattern: ^(0|[1-9]\d{0,9})\.\d{2}$
+          examples:
+          - '12.50'
+      required:
+      - productId
+      - variantId
+      - productName
+      - sku
+      - quantity
+      - unitPriceUsd
+      - discountUsd
+      - totalUsd
+    OrderList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          description: Opaque authenticated cursor; null exactly when hasNext is false.
+        hasNext:
+          type: boolean
+      required:
+      - items
+      - nextCursor
+      - hasNext
+    CategoryUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+      - name
+      - reason
+      - expectedVersion
+      additionalProperties: false
+    SellerList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Seller'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          description: Opaque authenticated cursor; null exactly when hasNext is false.
+        hasNext:
+          type: boolean
+      required:
+      - items
+      - nextCursor
+      - hasNext
+    AdminReviewList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+        nextCursor:
+          type:
+          - string
+          - 'null'
+          description: Opaque authenticated cursor; null exactly when hasNext is false.
+        hasNext:
+          type: boolean
+      required:
+      - items
+      - nextCursor
+      - hasNext
+    BadRequestProblem:
+      allOf:
+      - $ref: '#/components/schemas/Problem'
+      - type: object
+        properties:
+          status:
+            const: 400
+          code:
+            enum:
+            - INVALID_CURSOR
+            - INVALID_REQUEST
+            - UNSAFE_IMAGE
+    UnauthorizedProblem:
+      allOf:
+      - $ref: '#/components/schemas/Problem'
+      - type: object
+        properties:
+          status:
+            const: 401
+          code:
+            enum:
+            - AUTHENTICATION_REQUIRED
+            - INVALID_CREDENTIALS
+    ForbiddenProblem:
+      allOf:
+      - $ref: '#/components/schemas/Problem'
+      - type: object
+        properties:
+          status:
+            const: 403
+          code:
+            enum:
+            - ORIGIN_DENIED
+            - ROLE_DENIED
+            - SELLER_INACTIVE
+    NotFoundProblem:
+      allOf:
+      - $ref: '#/components/schemas/Problem'
+      - type: object
+        properties:
+          status:
+            const: 404
+          code:
+            enum:
+            - RESOURCE_NOT_FOUND
+    ConflictProblem:
+      allOf:
+      - $ref: '#/components/schemas/Problem'
+      - type: object
+        properties:
+          status:
+            const: 409
+          code:
+            enum:
+            - CART_CHANGED
+            - EMPTY_CART
+            - IDEMPOTENCY_CONFLICT
+            - ILLEGAL_ORDER_STATE
+            - IMAGE_LIMIT_EXCEEDED
+            - ITEM_UNAVAILABLE
+            - LOGIN_ALREADY_EXISTS
+            - REVIEW_ALREADY_EXISTS
+            - REVIEW_NOT_ELIGIBLE
+            - SKU_ALREADY_EXISTS
+            - STALE_VERSION
+            - STOCK_UNAVAILABLE
+            - VOUCHER_INVALID
+    PayloadTooLargeProblem:
+      allOf:
+      - $ref: '#/components/schemas/Problem'
+      - type: object
+        properties:
+          status:
+            const: 413
+          code:
+            enum:
+            - PAYLOAD_TOO_LARGE
+    UnsupportedMediaTypeProblem:
+      allOf:
+      - $ref: '#/components/schemas/Problem'
+      - type: object
+        properties:
+          status:
+            const: 415
+          code:
+            enum:
+            - UNSUPPORTED_MEDIA_TYPE
+    InternalErrorProblem:
+      allOf:
+      - $ref: '#/components/schemas/Problem'
+      - type: object
+        properties:
+          status:
+            const: 500
+          code:
+            enum:
+            - INTERNAL_ERROR
+    ServiceUnavailableProblem:
+      allOf:
+      - $ref: '#/components/schemas/Problem'
+      - type: object
+        properties:
+          status:
+            const: 503
+          code:
+            enum:
+            - SERVICE_UNAVAILABLE
+security: []

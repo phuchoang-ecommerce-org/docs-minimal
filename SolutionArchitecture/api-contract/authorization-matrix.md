@@ -1,16 +1,18 @@
 # API Authorization Matrix
 
-The [OpenAPI YAML](./openapi.yaml) lists permitted roles through `x-roles` per operation. These constraints also require row-level ownership checks in Spring Boot; a valid JWT role alone is insufficient.
+Roles in OpenAPI `x-roles` are necessary but do not replace owner-filtered queries. Guest means no authenticated operational role. Public discovery is available to all four human roles.
 
-| Capability | Guest | Member | Seller | Admin | Instance scope |
+| Capability | Guest | Member | Seller | Admin | Data scope |
 | --- | --- | --- | --- | --- | --- |
-| Browse/search/home/categories/read reviews/images | Yes | Yes | Yes | Yes | Published active listings for public reads |
-| Register/login | Yes | Sign-in when logged out | Sign-in when logged out | Sign-in when logged out | Credential flow |
-| Cart | Own Guest session | Own Member cart | No | No | Opaque session or `member_id` |
-| COD checkout/order/cancel | No | Own | No | No | Authenticated `member_id` |
-| Submit/edit review | No | Own Paid purchase | No | No | `member_id`, product and Paid Seller portion |
-| Product/stock/images | No | No | Own | Admin policy via separate operations | `seller_id` |
-| Mark COD portion Paid | No | No | Own | No | `seller_id` |
-| Manage Sellers/moderate/reports/audit | No | No | No | Yes | Platform-wide; audit append-only |
+| Products/categories/reviews/image bytes | Yes | Yes | Yes | Yes | Published product, active Seller, visible reviews |
+| Registration/login | Yes | Credential flow | Credential flow | Credential flow | Registration creates MEMBER only; no public role assignment |
+| Cart | Own opaque session | Own cart | No | No | MEMBER bearer or valid Guest cookie; allowed Origin for cookie writes |
+| Checkout address create/list | No | Own | No | No | Member from trusted actor; UC-04 support only |
+| Orders/list/detail/cancel | No | Own | No | No | Member predicate before state check |
+| Review create/list/edit/delete | No | Own | No | No | Creation requires purchased product in own Paid Seller portion; own reads include hidden reviews |
+| Product/stock/images | No | No | Own | No | SellerShop ownership; writes require ACTIVE shop |
+| Seller portions/mark-paid | No | No | Own | No | Portion belongs to resolved SellerShop; never another portion's data |
+| Seller policy/category writes | No | No | No | Yes | Reason and audit; version required for edits |
+| Moderation/reports/audit | No | No | No | Yes | Removed review content stays out of review lists; audit append-only |
 
-A non-owned record returns 404, missing/expired JWT returns 401, wrong role returns 403, and illegal state/stock/idempotency conflict returns 409. Public operations may omit JWT. Guest cart ownership uses an opaque HttpOnly cookie.
+Non-owned resources return 404. Wrong role returns 403 before lookup. Invalid required JWT returns 401. Allowed-Origin failure for cookie use returns 403. Owned stale edits/state conflicts return 409. Public product filters also apply to direct image/review URLs. The [error contract](./exceptional-errors.md) specifies safe payloads and exception mapping.

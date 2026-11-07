@@ -1,0 +1,11 @@
+@startuml
+    state "PLACED / PENDING_PAYMENT" as Pending
+    state "PLACED / PAID" as Paid
+    state "CANCELLED / PENDING_PAYMENT" as Cancelled
+    [*] --> Pending : UC-04 successful placement
+    Pending --> Pending : UC-07 valid portion paid, others pending
+    Pending --> Paid : UC-07 final portion paid
+    Pending --> Cancelled : UC-05 cancel, every portion pending
+    Paid --> [*]
+    Cancelled --> [*]
+@enduml

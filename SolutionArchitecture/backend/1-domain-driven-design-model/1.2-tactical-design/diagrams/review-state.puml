@@ -1,0 +1,8 @@
+@startuml
+    Visible --> Hidden : UC-10 Admin sets visible false
+    Hidden --> Visible : UC-10 Admin sets visible true
+    Visible --> Visible : UC-08 permitted owner edit
+    Hidden --> Hidden : UC-08 edit preserves moderation, proposed
+    Visible --> Removed : UC-08 permitted owner delete
+    Hidden --> Removed : UC-08 permitted owner delete
+@enduml

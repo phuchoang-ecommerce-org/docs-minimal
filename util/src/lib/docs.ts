@@ -59,6 +59,14 @@ function firstUsefulLine(markdown: string): string {
 
 export async function getDocuments(): Promise<Document[]> {
   const files = await markdownFiles(root);
+  // Include setup instructions without indexing dependencies or generated files.
+  const utilityReadme = join(root, utilityDirectory, 'README.md');
+  try {
+    await readFile(utilityReadme, 'utf8');
+    files.push(utilityReadme);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
   const documents = await Promise.all(files.map(async (file) => {
     const source = await readFile(file, 'utf8');
     const filePath = relative(root, file).split(sep).join('/');

@@ -6,11 +6,15 @@
     "doc": "docs"
   },
   "scripts": {
-    "dev": "astro dev",
-    "build": "node copy-assets.mjs && astro build",
+    "dev": "npm run docs:prepare && astro dev",
+    "build": "npm run validate:api && npm run docs:prepare && astro build",
     "preview": "astro preview",
     "diagrams:build": "node toSvg.js",
-    "validate:sequences": "node validate-sequences.mjs"
+    "validate:sequences": "node validate-sequences.mjs",
+    "validate:mermaid": "node validate-sequences.mjs",
+    "docs:prepare": "node copy-assets.mjs && node build-redoc.mjs",
+    "docs:api": "node build-redoc.mjs",
+    "validate:api": "redocly lint ../SolutionArchitecture/api-contract/openapi.yaml --config redocly.yaml && node validate-api.mjs"
   },
   "keywords": [],
   "author": "",
@@ -22,5 +26,10 @@
     "marked": "^12.0.2",
     "mermaid": "^12.1.0",
     "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "@redocly/cli": "2.76.0",
+    "jsdom": "^31.0.0",
+    "yaml": "2.9.1"
   }
 }
