@@ -16,7 +16,7 @@ This is a documentation migration, not an instruction to edit the current backen
 | Old API/event schemas | Replace with reduced OpenAPI 3.1; remove provider, shipping, return and removed-role operations |
 | Fourteen-module/CQRS infrastructure | Pragmatic Clean Architecture and DDD; small shared domain/core and direct in-process calls |
 | Old frontend Radix/Tailwind/shadcn, Japanese Zen Ma and state/motion stack | Next.js + Ant Design in pnpm monorepo; no Zustand, TanStack Query or Framer Motion |
-| Old QA/performance assumptions | Replace with [new tests](../../TestingBenchmark/testing-scenarios.md) and [benchmark scenarios](../../TestingBenchmark/benchmark-scenarios.md) |
+| Old QA/performance assumptions | Use the [approved test-first scenarios](../backend/4-automated-testing/4.%20Automated%20Testing.md); performance evidence belongs to the backend hardening backlog |
 | Existing unrelated libraries | Keep if useful and compatible; remove only when unused or tied to an excluded system |
 
 ## Dependency audit before implementation

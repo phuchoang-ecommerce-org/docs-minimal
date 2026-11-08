@@ -64,7 +64,7 @@ classDiagram
     HttpErrorMapper --> Problem
 ```
 
-These are proposed implementation types, not claims that Java classes exist. HTTP parsing/upload failures may be adapter-local exceptions; domain code never imports HTTP status or Spring MVC types. ErrorCode is the closed string enum in `components.schemas.Problem`; each operation's `x-error-codes` narrows which codes can occur.
+These are approved implementation types, not claims that Java classes exist. HTTP parsing/upload failures may be adapter-local exceptions; domain code never imports HTTP status or Spring MVC types. ErrorCode is the closed string enum in `components.schemas.Problem`; each operation's `x-error-codes` narrows which codes can occur.
 
 ## Mapping
 
@@ -97,4 +97,4 @@ Return `Content-Type: application/problem+json`. `type` is `about:blank`; `title
 }
 ```
 
-Before implementation, create scenario tests for each applicable operation/status/code, then verify exact status, MIME and schema. Cover controller validation, security filter failures, malformed multipart, ownership before version, duplicate/illegal state and database outage. Prove rollback and absence of sensitive fields. The [test-first template](../backend/4.%20Automated%20Testing/4.%20Automated%20Testing.md) records these checks; parsing this class diagram alone does not prove runtime behavior.
+Before implementation, create scenario tests for each applicable operation/status/code, then verify exact status, MIME and schema. Cover controller validation, security filter failures, malformed multipart, ownership before version, duplicate/illegal state and database outage. Prove rollback and absence of sensitive fields. The [test-first template](../backend/4-automated-testing/4.%20Automated%20Testing.md) records these checks; parsing this class diagram alone does not prove runtime behavior.

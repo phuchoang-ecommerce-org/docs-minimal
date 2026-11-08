@@ -10,7 +10,7 @@ globalThis.document = dom.window.document;
 const { default: mermaid } = await import('mermaid');
 mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
 const root = resolve(import.meta.dirname, '..');
-const folders = ['BusinessAnalyst', 'SolutionArchitecture'];
+const folders = ['BusinessAnalyst', 'SolutionArchitecture', 'ProductManager'];
 let count = 0;
 let failures = 0;
 const types = new Map();

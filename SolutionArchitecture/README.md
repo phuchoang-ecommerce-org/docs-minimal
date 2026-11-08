@@ -1,11 +1,13 @@
 # Solution Architecture
 
+**Status: Approved by the project owner on 2026-11-08.** Implementation progress is tracked in the [backend backlog](../ProductManager/README.md).
+
 | Topic | Documents |
 | --- | --- |
 | Strategic DDD (roadmap 1.1) | [Domain Discovery](./backend/1-domain-driven-design-model/1.1-strategic-design/1.1.1-domain-discovery.md), [Domain Decomposition](./backend/1-domain-driven-design-model/1.1-strategic-design/1.1.2-domain-decomposition.md), [Bounded Context Design](./backend/1-domain-driven-design-model/1.1-strategic-design/1.1.3-bounded-context-design.md) |
 | Tactical DDD (roadmap 1.2) | [Domain Model Design](./backend/1-domain-driven-design-model/1.2-tactical-design/1.2.1-domain-model-design.md), [Domain Behavior Design](./backend/1-domain-driven-design-model/1.2-tactical-design/1.2.2-domain-behavior-design.md) |
 | Technical decisions (roadmap 3) | [Modular Monolith](./backend/3-technical-decision/3.1-modular-monolith.md), [Clean Architecture](./backend/3-technical-decision/3.2-clean-architecture.md), [Spring Modulith](./backend/3-technical-decision/3.3-spring-modulith.md), [CQRS](./backend/3-technical-decision/3.4-cqrs.md), [jMolecules](./backend/3-technical-decision/3.5-jmolecules.md), [PostgreSQL and Flyway](./backend/3-technical-decision/3.6-postgresql.md), [JdbcTemplate](./backend/3-technical-decision/3.7-jdbc-template.md), [Optimistic Locking](./backend/3-technical-decision/3.8-optimistic-locking.md), [JWT Access Token and RBAC](./backend/3-technical-decision/3.9-jwt-access-token-rbac.md), [Java 21, Spring Boot and Spring WebMVC](./backend/3-technical-decision/3.10-java21-spring-webmvc.md), [Docker Compose](./backend/3-technical-decision/3.11-docker-compose.md), [Cursor-based Pagination](./backend/3-technical-decision/3.12-cursor-based-pagination.md), [Full-Text Search](./backend/3-technical-decision/3.13-full-text-search.md), [MapStruct](./backend/3-technical-decision/3.14-mapstruct.md), [Lombok](./backend/3-technical-decision/3.15-lombok.md) |
-| Automated Testing (roadmap 4) | [Scenario templates, test-first gates and ArchUnit](./backend/4.%20Automated%20Testing/4.%20Automated%20Testing.md) |
+| Automated Testing (roadmap 4) | [Scenario templates, test-first gates and ArchUnit](./backend/4-automated-testing/4.%20Automated%20Testing.md) |
 | System | [Overview](./system/system-overview.md), [security](./system/security.md), [runtime profiles](./system/runtime-profiles.md), [migration map](./system/migration-map.md) |
 | Backend | [Application Architecture](./backend/2-application-architecture/2.2-application-architecture/2.1.2-application-architecture.md), [Persistence diagrams](./backend/2-application-architecture/2.1-persistence-architecture/2.1.1-persistence-diagram.md) |
 | Frontend | [Frontend design and pnpm monorepo](./frontend/frontend-design.md), [homepage design](./frontend/homepage-design.md) |

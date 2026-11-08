@@ -1,5 +1,7 @@
 # API Contract
 
+**Status: Approved by the project owner on 2026-11-08.** Runtime conformance remains an implementation gate.
+
 [Open ReDoc on the documentation website](/redoc.html) · [OpenAPI 3.1 source](./openapi.yaml)
 
 OpenAPI is the target HTTP contract for **UC-01–UC-10**. It contains 38 operations. The ReDoc link works after starting the reader in `util/`; it is not a hosted service or a filesystem page.
@@ -20,6 +22,6 @@ Added seven supporting operations: list/create owned checkout addresses (UC-04),
 
 The contract defines variant IDs/prices/stock, owned reads, cursor envelopes, edit preconditions, Guest cart sessions/merge results, checkout replay semantics, order snapshots, moderation reasons and typed errors. The scope validator rejects operations absent from the inventory, missing use cases, dangling references and unused schemas; Redocly checks OpenAPI structure.
 
-These are design outputs, not evidence of working controllers. Implement each slice with the [scenario and test-first workflow](../backend/4.%20Automated%20Testing/4.%20Automated%20Testing.md). Before release, verify JWT/ownership, concurrent stock and cancel/payment races, same-key replay, image decoding and response schemas against real PostgreSQL.
+These are design outputs, not evidence of working controllers. Implement each slice with the [scenario and test-first workflow](../backend/4-automated-testing/4.%20Automated%20Testing.md). Before release, verify JWT/ownership, concurrent stock and cancel/payment races, same-key replay, image decoding and response schemas against real PostgreSQL.
 
 Contract revision 0.2.0 selects `expectedVersion`, cursor limit 1–100/default 20, registration password length 12–128, image limits and a 366-day maximum report interval as implementation defaults. They are contract design decisions, not newly discovered BA requirements. The approved LINK host/license list, compatible backend dependency versions and operational secrets are still deployment inputs; a valid OpenAPI file cannot supply them.

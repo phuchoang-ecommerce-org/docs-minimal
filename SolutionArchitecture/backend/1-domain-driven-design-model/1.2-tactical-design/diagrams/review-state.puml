@@ -2,7 +2,12 @@
     Visible --> Hidden : UC-10 Admin sets visible false
     Hidden --> Visible : UC-10 Admin sets visible true
     Visible --> Visible : UC-08 permitted owner edit
-    Hidden --> Hidden : UC-08 edit preserves moderation, proposed
+    Hidden --> Hidden : UC-08 edit preserves moderation
     Visible --> Removed : UC-08 permitted owner delete
     Hidden --> Removed : UC-08 permitted owner delete
+    note right of Removed
+      Soft-removal tombstone.
+      Eligible resubmission creates a new Review.
+      The removed record is not revived.
+    end note
 @enduml
