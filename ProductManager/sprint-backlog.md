@@ -64,14 +64,20 @@ The fallback is a **12-operation demo** listed in [Demo plan](./demo-plan.md#red
 
 ## Post-demo forecasts
 
-These are sequencing forecasts, not commitments validated by velocity. Re-estimate at the 20/11 review; unresolved policy input and unfinished P0 work take precedence. No frontend tasks enter these sprints.
+These are sequencing forecasts, not commitments validated by velocity. The feature allocations below predate the new benchmark scope and require re-planning before commitment. Re-estimate at the 20/11 review; unresolved policy input and unfinished P0 work take precedence. No frontend tasks enter these sprints.
 
 | Forecast window | Task allocation | Planned hours | Capacity assumption |
 | --- | --- | ---: | ---: |
 | S3: 23–27 Nov | PB-011 complete catalog/images 10 h; PB-014 governance 5 h; PB-013 reviews 6 h; PB-012 policy/tests 4 h | 25 h | 30 h, 5 h reserve |
-| S4: 30 Nov–04 Dec | PB-012 remaining voucher implementation 2 h; PB-015 moderation/report/audit 6 h; PB-016 full-contract hardening 5 h; PB-017 approved skills setup 6 h | 19 h | 30 h, 11 h reserve |
+| S4: 30 Nov–04 Dec | PB-012 remaining voucher implementation 2 h; PB-015 moderation/report/audit 6 h; PB-016 former hardening allowance 5 h (re-estimate); PB-017 approved skills setup 6 h | 19 h | 30 h, 11 h reserve |
 
 PB-013 starts only after initial visibility is defined; PB-012 behavior starts only after its rule/rounding/quota definitions and RED gate. Complete six-skill setup is deliberately outside the two-week critical path; existing documentation and manual gates remain enforceable meanwhile.
+
+## Post-Sprint 2 benchmark allocation
+
+PB-016 starts with [B0](../SolutionArchitecture/backend/5-benchmark/strategy.md) after the demo, earliest 23 Nov: fixture/manifest 2 h, k6 runner/assertions 2 h, repeated baseline/analysis 2 h. All three tasks are TODO and owned by the same developer. Exit evidence is three valid repeatable runs on the actual shipped slice with raw results and correctness assertions.
+
+At the Sprint 2 review, move at least 6 h of lower-priority post-demo feature work out of the selected window or extend the forecast. Keep defect reserve; do not add these hours to the 25 h S3 feature allocation. Re-estimate PB-016 remaining release checks and replace its obsolete 5 h S4 allowance. B1/B2 need another 4–8 h only when evidence triggers them; estimate B3/B4 separately. Unfinished P0 correctness work takes precedence over all benchmark execution.
 
 ## Daily evidence record
 

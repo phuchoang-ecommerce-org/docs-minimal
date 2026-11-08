@@ -6,6 +6,7 @@ Design baseline: **Approved by the project owner on 2026-11-08**. Delivery capac
 | --- | --- |
 | [Product Backlog](./product-backlog.md) | Ordered backend work, dependencies, acceptance and the 38-operation coverage map |
 | [Sprint Backlog](./sprint-backlog.md) | Two one-week sprints, daily tasks, capacity, checkpoints and later forecasts |
+| [Post-Sprint 2 benchmark](../SolutionArchitecture/backend/5-benchmark/README.md) | Phased measurements and evidence; capacity is re-planned after the demo |
 | [Demo plan](./demo-plan.md) | Reproducible API demonstration, fixtures, acceptance evidence and reduced scope if needed |
 
 The demo uses HTTP requests and PostgreSQL-backed evidence. Frontend pages, browser journeys and frontend skills are not work items. ReDoc documents the contract; it is not the backend or an API execution tool. Use an HTTP request collection or shell runner in the implementation repository for demonstration.

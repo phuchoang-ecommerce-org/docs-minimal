@@ -29,7 +29,7 @@ Estimates are **focused developer hours**, including scenario/test-first work, i
 | PB-013 | P1 | Paid-purchase ratings and own reviews | 6 | PB-007, PB-009 | S3 forecast |
 | PB-014 | P1 | Admin Seller and category policy | 5 | PB-002, PB-003 | S3 forecast |
 | PB-015 | P1 | Moderation, reports and audit reads | 6 | PB-013, PB-014 | S4 forecast |
-| PB-016 | P1 | Full-contract release hardening | 5 | PB-011–015, PB-018 | S4 forecast |
+| PB-016 | P1 | Benchmark and full-contract release hardening | Re-estimate; B0 6 h | B0: PB-018/019; full release: PB-011–015 | Post-demo B0, S4 forecast re-plan |
 | PB-017 | P2 | Install and verify approved backend skills/agents | 6 | PB-001 | S4 forecast |
 
 ## PB-001 — Foundation and reproducible local environment
@@ -168,9 +168,11 @@ Admin review list/moderation, bounded reports and cursor audit read.
 
 Acceptance: Reason required; hidden review excluded from next public summary; no audit mutations; UTC intervals <=366 days and exact gross/paid metric definitions match OpenAPI.
 
-## PB-016 — Full-contract release hardening
+## PB-016 — Benchmark and full-contract release hardening
 
-**P1 · TODO · 5 h.** Trace: UC-01–10; ARCH-01–10. Dependencies: PB-011–015, PB-018.
+**P1 · TODO · Re-estimate.** Trace: UC-01–10; ARCH-01–10. B0 depends on PB-018/019 and the actual shipped slice; full-contract completion depends on PB-011–015.
+
+Start with the [phased benchmark plan](../SolutionArchitecture/backend/5-benchmark/README.md): B0 is estimated at 6 h after the demo. B1/B2 add 4–8 h only when triggered; B3/B4 are estimated from evidence. The former 5 h release-hardening estimate cannot cover this expanded scope; re-plan capacity without counting B0 twice.
 
 All 38 operations, migration compatibility, real query plans, deployment/profile checks, secrets and operational runbook.
 
