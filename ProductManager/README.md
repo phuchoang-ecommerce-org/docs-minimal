@@ -8,8 +8,9 @@ Design baseline: **Approved by the project owner on 2026-11-08**. Delivery capac
 | [Sprint Backlog](./sprint-backlog.md) | Two one-week sprints, daily tasks, capacity, checkpoints and later forecasts |
 | [Post-Sprint 2 benchmark](../SolutionArchitecture/backend/5-benchmark/README.md) | Phased measurements and evidence; capacity is re-planned after the demo |
 | [Demo plan](./demo-plan.md) | Reproducible API demonstration, fixtures, acceptance evidence and reduced scope if needed |
+| [Frontend delivery plan](./frontend/README.md) | Conditional web demo plan aligned with the backend gates and the 22 Nov demo |
 
-The demo uses HTTP requests and PostgreSQL-backed evidence. Frontend pages, browser journeys and frontend skills are not work items. ReDoc documents the contract; it is not the backend or an API execution tool. Use an HTTP request collection or shell runner in the implementation repository for demonstration.
+The backend demo uses HTTP requests and PostgreSQL-backed evidence. Frontend pages, browser journeys and frontend skills are not work items in this backend plan; the separate frontend forecast is linked above. ReDoc documents the contract; it is not the backend or an API execution tool. Use an HTTP request collection or shell runner in the implementation repository for demonstration.
 
 The owner has approved the existing design and skills/subagents plan. Newly planned work below is **TODO**, not already implemented. No code repository, team velocity or runtime evidence was inspected for this planning task. Repository selection and a compatible dependency matrix are PB-001 inputs. Approval does not create deployment secrets, choose values absent from the design or authorize new endpoints.
 

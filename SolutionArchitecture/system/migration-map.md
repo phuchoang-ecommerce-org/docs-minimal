@@ -15,13 +15,13 @@ This is a documentation migration, not an instruction to edit the current backen
 | Product images | Two modes: LINK loads approved URL live and stores metadata only; UPLOAD stores bytes in PostgreSQL. Future dev product seed uses LINK; no seed created now |
 | Old API/event schemas | Replace with reduced OpenAPI 3.1; remove provider, shipping, return and removed-role operations |
 | Fourteen-module/CQRS infrastructure | Pragmatic Clean Architecture and DDD; small shared domain/core and direct in-process calls |
-| Old frontend Radix/Tailwind/shadcn, Japanese Zen Ma and state/motion stack | Next.js + Ant Design in pnpm monorepo; no Zustand, TanStack Query or Framer Motion |
+| Old frontend Radix/Tailwind/shadcn, Japanese Zen Ma and state/motion stack | Next.js + Ant Design in pnpm monorepo; TanStack Query v5 for interactive server-response caching; no Zustand or Framer Motion |
 | Old QA/performance assumptions | Use the [approved test-first scenarios](../backend/4-automated-testing/4.%20Automated%20Testing.md); performance evidence belongs to the backend hardening backlog |
 | Existing unrelated libraries | Keep if useful and compatible; remove only when unused or tied to an excluded system |
 
 ## Dependency audit before implementation
 
-The current backend Gradle app includes Kafka and Redis starters and Kafka Testcontainers; these must leave a new implementation. PostgreSQL, Flyway, security/JWT, web MVC, validation and test libraries remain relevant. Spring Modulith, jMolecules, ArchUnit, MapStruct and Lombok may remain where useful, without old event/module rules. The current frontend's Next.js, React, TypeScript and Zod remain relevant; its Redis client, Radix UI, Tailwind and shadcn tooling leave the new target. Ant Design and pnpm are target additions. Image URL display has a narrowly approved external source dependency; UPLOAD uses PostgreSQL. No version change is prescribed here.
+The current backend Gradle app includes Kafka and Redis starters and Kafka Testcontainers; these must leave a new implementation. PostgreSQL, Flyway, security/JWT, web MVC, validation and test libraries remain relevant. Spring Modulith, jMolecules, ArchUnit, MapStruct and Lombok may remain where useful, without old event/module rules. The current frontend's Next.js, React, TypeScript and Zod remain relevant; its Redis client, Radix UI, Tailwind and shadcn tooling leave the new target. Ant Design, TanStack Query v5 and pnpm are in the target stack. Image URL display has a narrowly approved external source dependency; UPLOAD uses PostgreSQL. No other version change is prescribed here.
 
 ## Consistency checklist
 

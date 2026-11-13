@@ -2,7 +2,7 @@
 
 ## System boundary
 
-Browser → Next.js application → Spring Boot REST API → PostgreSQL for marketplace data. LINK product images are requested live from approved public image hosts by the browser. UPLOAD image bytes are stored and served from PostgreSQL. The browser may call same-origin Next.js routes/actions; only server code calls the Spring Boot API for private operations. Approved image hosts are the sole runtime external-source exception for LINK images. No broker, cache, search cluster, payment or delivery provider participates in ordering.
+Browser → Next.js application → Spring Boot REST API → PostgreSQL for marketplace data. LINK product images are requested live from approved public image hosts by the browser. UPLOAD image bytes are stored and served from PostgreSQL. The browser may call same-origin Next.js routes/actions; only server code calls the Spring Boot API for private operations. Approved image hosts are the sole runtime external-source exception for LINK images. No broker, shared cache, search cluster, payment or delivery provider participates in ordering.
 
 ## Context and ownership
 
@@ -30,7 +30,7 @@ Next.js owns the browser experience, route protection and server-side API client
 | One customer order, Seller portions | Seller sees and marks only own portion; aggregate Paid when all portions Paid |
 | PostgreSQL as sole persistent data tier | Atomic stock, order, review and audit; Flyway migrations and backup/restore |
 | Two product image modes | LINK is remote browser fetch with URL metadata; UPLOAD bytes are stored in PostgreSQL |
-| Frontend monorepo | pnpm workspace, Next.js App Router, Ant Design; dev/prod profiles |
+| Frontend monorepo | pnpm workspace, Next.js App Router, Ant Design and TanStack Query v5 for interactive server-response caching; dev/prod profiles |
 | Backend architecture | One deployable Spring Boot application; pragmatic Clean Architecture and DDD with small shared domain/core |
 
 The deployment has a Next.js process, a Spring Boot process and PostgreSQL. HTTPS terminates at the application edge; production secrets are injected through deployment configuration. PostgreSQL backup/restore must include UPLOAD images. A database outage makes transactional operations unavailable; do not claim success for uncommitted work. The LINK image source is a separate availability dependency only for image display.
@@ -42,7 +42,7 @@ See [backend design](../backend/2-application-architecture/2.2-application-archi
 | Keep when used | Remove or replace |
 | --- | --- |
 | Java 21, Spring Boot, Spring Security/JWT, validation, PostgreSQL driver, Flyway, Spring Boot Test, JUnit, AssertJ, Mockito, Testcontainers PostgreSQL; MapStruct, jMolecules, ArchUnit and Spring Modulith if they still give value | Kafka and Redis starters, Kafka Testcontainers, external-provider adapters and code that only serves them |
-| Next.js, React, TypeScript, Zod, OpenAPI tooling, accessibility/testing tools and small pure UI helpers if needed | Radix UI, Tailwind packages, Redis client, Zustand, TanStack Query, Framer Motion, shadcn source and old design-token rules |
+| Next.js, React, TypeScript, Zod, TanStack Query v5, OpenAPI tooling, accessibility/testing tools and small pure UI helpers if needed | Radix UI, Tailwind packages, Redis client, Zustand, Framer Motion, shadcn source and old design-token rules |
 | Ant Design and pnpm workspace tooling | Old npm lockfile after the pnpm migration |
 
 Do not remove unrelated dependencies merely to make the dependency list shorter. Do not retain unused code solely because it appeared in the former stack.

@@ -18,9 +18,9 @@ Do not show a shipping promise, shipping fee, return policy, non-COD payment cho
 
 ## Navigation and interaction
 
-Search submits a keyword to `/products?q=...`; category cards link to filtered listings; product cards link to details. Add-to-cart is available to Guest/Member and gives immediate success/error feedback. Checkout from cart sends Guest to login, then returns to checkout with cart retained. Seller/Admin navigation appears only after login and is separate from public discovery. The server still checks role and ownership.
+Search submits a keyword to `/products?q=...`; category cards link to `/products?categoryId=...`; product cards link to details. Add-to-cart is available to Guest/Member and reports the server result. Checkout from cart sends Guest to login, then returns to checkout with the valid merged cart; rejected Guest lines are shown. Seller/Admin navigation appears only after login and is separate from public discovery. The server still checks role and ownership.
 
-The homepage is server-rendered where possible from a bounded `GET /home` response (featured categories and a capped product list). Use URL query parameters for search/filter state, and local React state for input/feedback. No Zustand or TanStack Query. Use Ant Design theme tokens and simple responsive CSS; avoid a separate visual design system.
+The homepage is server-rendered where possible from `GET /categories` and `GET /products` with a bounded `limit`. There is no `GET /home` in the [target API](../api-contract/http-api.md). Featured placement is a page composition choice using returned categories/products; no ranking or recommendation endpoint is implied. Use URL query parameters for search/filter state, TanStack Query for interactive catalog/cart reads and local React state for input/feedback. The [caching design](./caching.md) owns query policy. Use Ant Design theme tokens and simple responsive CSS; avoid a separate visual design system.
 
 ## Images and states
 
@@ -30,7 +30,7 @@ Both image modes appear identically in cards: LINK requests approved remote sour
 | --- | --- |
 | Loading | Stable card placeholders/skeletons without layout jump |
 | No featured products | Plain empty state and link to full catalog |
-| Catalog API unavailable | Error message with retry; header and navigation remain usable |
+| Category or product API unavailable | Error message with retry for the affected section; header and navigation remain usable |
 | LINK source unavailable | Local placeholder; no blocked product action |
 | UPLOAD content unavailable | Local placeholder; log/monitor backend issue |
 | Small screens | Header condenses; search stays reachable; grid reduces columns without horizontal scroll |

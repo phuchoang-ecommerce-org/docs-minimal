@@ -1626,8 +1626,9 @@ paths:
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
       description: 'Serialize on customer-order root with payment. Cancel only if ALL seller portions are PENDING_PAYMENT;
-        atomically set order/portions CANCELLED, restore stock once and audit. Already-cancelled retries return
-        current order without stock/audit duplication. Any Paid portion returns 409.
+        atomically set the customer order status to CANCELLED, restore stock once and audit. Each SellerOrder.status
+        reflects the parent status; its stored paymentStatus remains PENDING_PAYMENT. Already-cancelled retries return
+        the current order without stock/audit duplication. Any Paid portion returns 409.
 
 
         Use case: UC-05. Errors: 400 INVALID_REQUEST; 401 AUTHENTICATION_REQUIRED; 403 ROLE_DENIED; 404 RESOURCE_NOT_FOUND;
@@ -3155,6 +3156,7 @@ components:
           format: uuid
         paymentStatus:
           type: string
+          description: Remains PENDING_PAYMENT when the parent order is cancelled.
           enum:
           - PENDING_PAYMENT
           - PAID
@@ -3171,6 +3173,7 @@ components:
           format: uuid
         status:
           type: string
+          description: Derived from the parent customer order status.
           enum:
           - PLACED
           - CANCELLED

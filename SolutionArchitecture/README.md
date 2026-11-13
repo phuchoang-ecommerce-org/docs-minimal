@@ -11,7 +11,7 @@
 | Benchmark (roadmap 5) | [Phased backend strategy, scenarios and evidence](./backend/5-benchmark/README.md) |
 | System | [Overview](./system/system-overview.md), [security](./system/security.md), [runtime profiles](./system/runtime-profiles.md), [migration map](./system/migration-map.md) |
 | Backend | [Application Architecture](./backend/2-application-architecture/2.2-application-architecture/2.1.2-application-architecture.md), [Persistence diagrams](./backend/2-application-architecture/2.1-persistence-architecture/2.1.1-persistence-diagram.md) |
-| Frontend | [Frontend design and pnpm monorepo](./frontend/frontend-design.md), [homepage design](./frontend/homepage-design.md) |
+| Frontend | [Frontend design and pnpm monorepo](./frontend/frontend-design.md), [Component Tree](./frontend/component-tree.md), [Navigation and Routing](./frontend/navigation-routing.md), [Caching](./frontend/caching.md), [homepage design](./frontend/homepage-design.md) |
 | Interaction | [Sequence diagrams](./backend/sequences/README.md) |
 | API | [OpenAPI 3.1 / ReDoc contract](./api-contract/index.md), [HTTP conventions](./api-contract/http-api.md), [image contract](./api-contract/product-images.md) |
 
