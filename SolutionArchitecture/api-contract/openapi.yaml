@@ -226,9 +226,9 @@ paths:
       - name: q
         in: query
         required: false
+        description: Empty or whitespace-only text browses products without a search filter.
         schema:
           type: string
-          minLength: 1
           maxLength: 200
       - name: categoryId
         in: query
@@ -3088,6 +3088,10 @@ components:
         variantId:
           type: string
           format: uuid
+        productName:
+          type: string
+        variantLabel:
+          type: string
         quantity:
           type: integer
           minimum: 1
@@ -3099,6 +3103,8 @@ components:
           - '12.50'
       required:
       - variantId
+      - productName
+      - variantLabel
       - quantity
       - unitPriceUsd
       additionalProperties: false
